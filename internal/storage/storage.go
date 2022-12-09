@@ -24,6 +24,8 @@ import (
 	"mime"
 	"net/url"
 	"path"
+	"runtime"
+	"strings"
 	"time"
 
 	"codeberg.org/gruf/go-cache/v3/ttl"
@@ -95,6 +97,8 @@ func NewFileStorage() (*Driver, error) {
 	// Load runtime configuration
 	basePath := config.GetStorageLocalBasePath()
 
+	basePath = trimBasePath(basePath)
+
 	// Open the disk storage implementation
 	disk, err := storage.OpenDisk(basePath, &storage.DiskConfig{
 		// Put the store lockfile in the storage dir itself.
@@ -112,6 +116,13 @@ func NewFileStorage() (*Driver, error) {
 		KVStore: kv.New(disk),
 		Storage: disk,
 	}, nil
+}
+
+func trimBasePath(path string) string {
+	if runtime.GOOS == "darwin" {
+		path = strings.TrimPrefix(path, "/")
+	}
+	return path
 }
 
 func NewS3Storage() (*Driver, error) {
