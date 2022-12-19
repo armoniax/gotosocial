@@ -63,8 +63,9 @@ func (m *Module) TokenCheck(c *gin.Context) {
 		}
 
 		if user.ConfirmedAt.IsZero() {
-			log.Warnf("authenticated user %s has never confirmed thier email address", userID)
-			return
+			//mark:
+			//log.Warnf("authenticated user %s has never confirmed thier email address", userID)
+			//return
 		}
 
 		if !*user.Approved {

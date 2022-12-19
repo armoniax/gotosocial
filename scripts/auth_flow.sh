@@ -29,4 +29,10 @@ USER_ACCESS_TOKEN=$(echo "${ACCOUNT_REGISTER_RESPONSE}" | jq -r .access_token)
 echo "Obtained user access token: ${USER_ACCESS_TOKEN}"
 
 # # Step 4: verify the returned access token
-curl -s -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" "${SERVER_URL}/api/v1/accounts/verify_credentials" | jq
+VERIFY_RESPONSE=$(curl -s -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" "${SERVER_URL}/api/v1/accounts/verify_credentials")
+echo "verify_credentials: ${VERIFY_RESPONSE}"
+
+# Step 5: change email
+CHANGE_EMAIL=$(curl --fail -s -X POST -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" -F "new_email=' '"  "${SERVER_URL}/api/v1/user/email_change")
+echo "email: ${CHANGE_EMAIL}"
+

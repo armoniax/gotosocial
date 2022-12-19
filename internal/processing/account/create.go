@@ -51,7 +51,9 @@ func (p *processor) Create(ctx context.Context, applicationToken oauth2.TokenInf
 	}
 
 	reasonRequired := config.GetAccountsReasonRequired()
-	approvalRequired := config.GetAccountsApprovalRequired()
+	//mark:
+	//approvalRequired := config.GetAccountsApprovalRequired()
+	approvalRequired := false
 
 	// don't store a reason if we don't require one
 	reason := form.Reason
