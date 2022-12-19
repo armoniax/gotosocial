@@ -220,6 +220,8 @@ type Processor interface {
 	// UserConfirmEmail confirms an email address using the given token.
 	// The user belonging to the confirmed email is also returned.
 	UserConfirmEmail(ctx context.Context, token string) (*gtsmodel.User, gtserror.WithCode)
+	// UserChangeEmail changes the email for the given user, with the given form.
+	UserChangeEmail(ctx context.Context, authed *oauth.Auth, form *apimodel.EmailChangeRequest) gtserror.WithCode
 
 	/*
 		FEDERATION API-FACING PROCESSING FUNCTIONS

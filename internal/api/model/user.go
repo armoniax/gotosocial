@@ -35,3 +35,7 @@ type PasswordChangeRequest struct {
 	// required: true
 	NewPassword string `form:"new_password" json:"new_password" xml:"new_password" validation:"required"`
 }
+
+type EmailChangeRequest struct {
+	NewEmail string `form:"new_email" json:"new_email" xml:"new_email" validation:"new_email"`
+}

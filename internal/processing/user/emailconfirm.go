@@ -132,3 +132,14 @@ func (p *processor) ConfirmEmail(ctx context.Context, token string) (*gtsmodel.U
 
 	return user, nil
 }
+
+func (p *processor) ChangeEmail(ctx context.Context, user *gtsmodel.User, newEmail string) gtserror.WithCode {
+	//must validate
+
+	user.Email = newEmail
+
+	if err := p.db.UpdateByID(ctx, user, user.ID, "email"); err != nil {
+		return gtserror.NewErrorInternalError(err, "database error")
+	}
+	return nil
+}

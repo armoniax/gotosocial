@@ -34,3 +34,7 @@ func (p *processor) UserChangePassword(ctx context.Context, authed *oauth.Auth, 
 func (p *processor) UserConfirmEmail(ctx context.Context, token string) (*gtsmodel.User, gtserror.WithCode) {
 	return p.userProcessor.ConfirmEmail(ctx, token)
 }
+
+func (p *processor) UserChangeEmail(ctx context.Context, authed *oauth.Auth, form *apimodel.EmailChangeRequest) gtserror.WithCode {
+	return p.userProcessor.ChangeEmail(ctx, authed.User, form.NewEmail)
+}
