@@ -33,6 +33,6 @@ VERIFY_RESPONSE=$(curl -s -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" "${SER
 echo "verify_credentials: ${VERIFY_RESPONSE}"
 
 # Step 5: change email
-CHANGE_EMAIL=$(curl --fail -s -X POST -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" -F "new_email=' '"  "${SERVER_URL}/api/v1/user/email_change")
+CHANGE_EMAIL=$(curl --fail -s -X POST -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" -F "new_email=''"  "${SERVER_URL}/api/v1/user/email_change")
 echo "email: ${CHANGE_EMAIL}"
 
