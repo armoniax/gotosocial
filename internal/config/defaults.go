@@ -52,7 +52,7 @@ var Defaults = Configuration{
 	InstanceDeliverToSharedInboxes: true,
 
 	AccountsRegistrationOpen: true,
-	AccountsApprovalRequired: true,
+	AccountsApprovalRequired: false,
 	AccountsReasonRequired:   true,
 	AccountsAllowCustomCSS:   false,
 
