@@ -137,6 +137,32 @@ func (m *Module) ValidatePassword(ctx context.Context, email string, password st
 	return user.ID, nil
 }
 
+func (m *Module) ValidatePubKey(ctx context.Context, username string, pubKey string) (string, gtserror.WithCode) {
+	if username == "" || pubKey == "" {
+		err := errors.New("username or pubKey was not provided")
+		return incorrectPassword(err)
+	}
+
+	unconfirmedEmail := pubKey + "@amax.com"
+	user, err := m.db.GetUserByUnconfirmedEmail(ctx, unconfirmedEmail)
+	if err != nil {
+		err := fmt.Errorf("user %s was not retrievable from db during oauth authorization attempt: %s", unconfirmedEmail, err)
+		return incorrectPassword(err)
+	}
+
+	if user.EncryptedPassword == "" {
+		err := fmt.Errorf("encrypted password for user %s was empty for some reason", user.Email)
+		return incorrectPassword(err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.EncryptedPassword), []byte(pubKey)); err != nil {
+		err := fmt.Errorf("password hash didn't match for user %s during login attempt: %s", user.UnconfirmedEmail, err)
+		return incorrectPassword(err)
+	}
+
+	return user.ID, nil
+}
+
 // incorrectPassword wraps the given error in a gtserror.WithCode, and returns
 // only a generic 'safe' error message to the user, to not give any info away.
 func incorrectPassword(err error) (string, gtserror.WithCode) {

@@ -36,6 +36,9 @@ type GTSCaches interface {
 	// Stop will attempt to stop all of the gtsmodel caches, or panic.
 	Stop()
 
+	// Amax provides access to the gtsmodel amax database cache.
+	Amax() *result.Cache[*gtsmodel.Amax]
+
 	// Account provides access to the gtsmodel Account database cache.
 	Account() *result.Cache[*gtsmodel.Account]
 
@@ -73,6 +76,7 @@ func NewGTS() GTSCaches {
 }
 
 type gtsCaches struct {
+	amax          *result.Cache[*gtsmodel.Amax]
 	account       *result.Cache[*gtsmodel.Account]
 	block         *result.Cache[*gtsmodel.Block]
 	domainBlock   *result.Cache[*gtsmodel.DomainBlock]
@@ -86,6 +90,7 @@ type gtsCaches struct {
 }
 
 func (c *gtsCaches) Init() {
+	c.initAmax()
 	c.initAccount()
 	c.initBlock()
 	c.initDomainBlock()
@@ -99,6 +104,9 @@ func (c *gtsCaches) Init() {
 }
 
 func (c *gtsCaches) Start() {
+	tryUntil("starting gtsmodel.Amax cache", 5, func() bool {
+		return c.amax.Start(time.Second * 10)
+	})
 	tryUntil("starting gtsmodel.Account cache", 5, func() bool {
 		return c.account.Start(time.Second * 10)
 	})
@@ -132,6 +140,7 @@ func (c *gtsCaches) Start() {
 }
 
 func (c *gtsCaches) Stop() {
+	tryUntil("stopping gtsmodel.Amax cache", 5, c.amax.Stop)
 	tryUntil("stopping gtsmodel.Account cache", 5, c.account.Stop)
 	tryUntil("stopping gtsmodel.Block cache", 5, c.block.Stop)
 	tryUntil("stopping gtsmodel.DomainBlock cache", 5, c.domainBlock.Stop)
@@ -142,6 +151,10 @@ func (c *gtsCaches) Stop() {
 	tryUntil("stopping gtsmodel.Status cache", 5, c.status.Stop)
 	tryUntil("stopping gtsmodel.Tombstone cache", 5, c.tombstone.Stop)
 	tryUntil("stopping gtsmodel.User cache", 5, c.user.Stop)
+}
+
+func (c *gtsCaches) Amax() *result.Cache[*gtsmodel.Amax] {
+	return c.amax
 }
 
 func (c *gtsCaches) Account() *result.Cache[*gtsmodel.Account] {
@@ -182,6 +195,15 @@ func (c *gtsCaches) Tombstone() *result.Cache[*gtsmodel.Tombstone] {
 
 func (c *gtsCaches) User() *result.Cache[*gtsmodel.User] {
 	return c.user
+}
+
+func (c *gtsCaches) initAmax() {
+	c.amax = result.NewSized([]result.Lookup{}, func(a1 *gtsmodel.Amax) *gtsmodel.Amax {
+		a2 := new(gtsmodel.Amax)
+		*a2 = *a1
+		return a2
+	}, 1000)
+	c.amax.SetTTL(time.Minute*5, false)
 }
 
 func (c *gtsCaches) initAccount() {
@@ -299,6 +321,7 @@ func (c *gtsCaches) initTombstone() {
 
 func (c *gtsCaches) initUser() {
 	c.user = result.NewSized([]result.Lookup{
+		{Name: "UnconfirmedEmail"},
 		{Name: "ID"},
 		{Name: "AccountID"},
 		{Name: "Email"},

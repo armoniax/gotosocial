@@ -73,6 +73,7 @@ var registerTables = []interface{}{
 
 // DBService satisfies the DB interface
 type DBService struct {
+	db.Amax
 	db.Account
 	db.Admin
 	db.Basic

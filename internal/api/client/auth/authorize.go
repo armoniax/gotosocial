@@ -267,6 +267,140 @@ func (m *Module) AuthorizePOSTHandler(c *gin.Context) {
 	}
 }
 
+type loginWithPubKey struct {
+	Username string `form:"username"`
+	PubKey   string `form:"pub_key"`
+}
+
+func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
+	s := sessions.Default(c)
+	//
+	//form := &loginWithPubKey{}
+	//if err := c.ShouldBind(form); err != nil {
+	//	m.clearSession(s)
+	//	api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, oauth.HelpfulAdvice), m.processor.InstanceGet)
+	//	return
+	//}
+	//
+	//_, errWithCode := m.ValidatePubKey(c.Request.Context(), form.Username, form.PubKey)
+	//if errWithCode != nil {
+	//	// don't clear session here, so the user can just press back and try again
+	//	// if they accidentally gave the wrong password or something
+	//	api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+	//	return
+	//}
+	//
+	//_, err := m.db.GetAmaxByPubKey(c.Request.Context(), form.PubKey)
+	//if err != nil {
+	//	//api.ErrorHandler(c, gtserror.NewErrorGone(err), m.processor.InstanceGet)
+	//	return
+	//}
+
+	//验证下面添加
+
+	///******
+	// We need to retrieve the original form submitted to the authorizeGEThandler, and
+	// recreate it on the request so that it can be used further by the oauth2 library.
+	errs := []string{}
+
+	forceLogin, ok := s.Get(sessionForceLogin).(string)
+	if !ok {
+		forceLogin = "false"
+	}
+
+	responseType, ok := s.Get(sessionResponseType).(string)
+	if !ok || responseType == "" {
+		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionResponseType))
+	}
+
+	clientID, ok := s.Get(sessionClientID).(string)
+	if !ok || clientID == "" {
+		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionClientID))
+	}
+
+	redirectURI, ok := s.Get(sessionRedirectURI).(string)
+	if !ok || redirectURI == "" {
+		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionRedirectURI))
+	}
+
+	scope, ok := s.Get(sessionScope).(string)
+	if !ok {
+		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionScope))
+	}
+
+	var clientState string
+	if s, ok := s.Get(sessionClientState).(string); ok {
+		clientState = s
+	}
+
+	userID, ok := s.Get(sessionUserID).(string)
+	if !ok {
+		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionUserID))
+	}
+
+	if len(errs) != 0 {
+		errs = append(errs, oauth.HelpfulAdvice)
+		api.ErrorHandler(c, gtserror.NewErrorBadRequest(errors.New("one or more missing keys on session during AuthorizePOSTHandler"), errs...), m.processor.InstanceGet)
+		return
+	}
+
+	user, err := m.db.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		m.clearSession(s)
+		safe := fmt.Sprintf("user with id %s could not be retrieved", userID)
+		var errWithCode gtserror.WithCode
+		if err == db.ErrNoEntries {
+			errWithCode = gtserror.NewErrorBadRequest(err, safe, oauth.HelpfulAdvice)
+		} else {
+			errWithCode = gtserror.NewErrorInternalError(err, safe, oauth.HelpfulAdvice)
+		}
+		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+		return
+	}
+
+	acct, err := m.db.GetAccountByID(c.Request.Context(), user.AccountID)
+	if err != nil {
+		m.clearSession(s)
+		safe := fmt.Sprintf("account with id %s could not be retrieved", user.AccountID)
+		var errWithCode gtserror.WithCode
+		if err == db.ErrNoEntries {
+			errWithCode = gtserror.NewErrorBadRequest(err, safe, oauth.HelpfulAdvice)
+		} else {
+			errWithCode = gtserror.NewErrorInternalError(err, safe, oauth.HelpfulAdvice)
+		}
+		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+		return
+	}
+
+	if acct.ID == "" {
+		return
+	}
+
+	if redirectURI != oauth.OOBURI {
+		// we're done with the session now, so just clear it out
+		m.clearSession(s)
+	}
+
+	// we have to set the values on the request form
+	// so that they're picked up by the oauth server
+	c.Request.Form = url.Values{
+		sessionForceLogin:   {forceLogin},
+		sessionResponseType: {responseType},
+		sessionClientID:     {clientID},
+		sessionRedirectURI:  {redirectURI},
+		sessionScope:        {scope},
+		sessionUserID:       {userID},
+	}
+
+	if clientState != "" {
+		c.Request.Form.Set("state", clientState)
+	}
+
+	if errWithCode := m.processor.OAuthHandleAuthorizeRequest(c.Writer, c.Request); errWithCode != nil {
+		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+	}
+}
+
 // saveAuthFormToSession checks the given OAuthAuthorize form,
 // and stores the values in the form into the session.
 func saveAuthFormToSession(s sessions.Session, form *model.OAuthAuthorize) gtserror.WithCode {

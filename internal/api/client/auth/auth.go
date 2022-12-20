@@ -31,6 +31,8 @@ import (
 
 /* #nosec G101 */
 const (
+	OauthSignInUnconfirmedEmailPath = "/oauth/token/unconfirmed_email"
+
 	// AuthSignInPath is the API path for users to sign in through
 	AuthSignInPath = "/auth/sign_in"
 
@@ -96,6 +98,7 @@ func (m *Module) Route(s router.Router) error {
 
 	s.AttachHandler(http.MethodGet, OauthAuthorizePath, m.AuthorizeGETHandler)
 	s.AttachHandler(http.MethodPost, OauthAuthorizePath, m.AuthorizePOSTHandler)
+	s.AttachHandler(http.MethodPost, OauthSignInUnconfirmedEmailPath, m.AuthorizeUnconfirmedEmailPOSTHandler)
 
 	s.AttachHandler(http.MethodGet, CallbackPath, m.CallbackGETHandler)
 	s.AttachHandler(http.MethodPost, OauthFinalizePath, m.FinalizePOSTHandler)
