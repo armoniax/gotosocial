@@ -95,7 +95,7 @@ var Defaults = Configuration{
 	SMTPPassword: "",
 	SMTPFrom:     "GoToSocial",
 
-	SyslogEnabled:  false,
+	SyslogEnabled:  true,
 	SyslogProtocol: "udp",
 	SyslogAddress:  "localhost:514",
 

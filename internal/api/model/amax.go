@@ -19,7 +19,7 @@ package model
 */
 
 type AmaxSubmitInfoRequest struct {
-	UserID       string `form:"user_id" json:"user_id" xml:"user_id" validation:"user_id"`
+	UserID       string `form:"user_id" json:"user_id" xml:"user_id"`
 	Username     string `form:"username" json:"username" xml:"username" validation:"username"`
 	ClientID     string `form:"client_id" json:"client_id" xml:"client_id" validation:"client_id"`
 	RedirectUri  string `form:"redirect_uri" json:"redirect_uri" xml:"redirect_uri" validation:"redirect_uri"`

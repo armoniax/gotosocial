@@ -161,6 +161,10 @@ func NewBunDBService(ctx context.Context, state *state.State) (db.DB, error) {
 	}
 
 	ps := &DBService{
+		Amax: &amaxDB{
+			conn:  conn,
+			state: state,
+		},
 		Account: &accountDB{
 			conn:  conn,
 			state: state,

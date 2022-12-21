@@ -38,16 +38,12 @@ func (m *Module) AccountCreateAmaxInfoPOSTHandler(c *gin.Context) {
 		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
 		return
 	}
-
-	c.JSON(http.StatusOK, "")
+	c.JSON(http.StatusOK, "success!")
 }
 
 func validateCreateAmax(form *model.AmaxSubmitInfoRequest) error {
 	if form == nil {
 		return errors.New("form is nil")
-	}
-	if len(form.UserID) != 26 {
-		return errors.Errorf("user_id length is not correct: %v", form.UserID)
 	}
 
 	if len(form.ClientID) != 26 {

@@ -14,5 +14,5 @@ type Amax struct {
 	RedirectURI  string    `validate:"required" bun:",notnull"`
 	ResponseType string    `validate:"required" bun:",notnull"`
 	PubKey       string    `validate:"required" bun:",notnull"`
-	UserNam      string    `validate:"required" bun:",notnull"`
+	Username     string    `validate:"required" bun:",notnull"`
 }
