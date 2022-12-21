@@ -274,31 +274,33 @@ type loginWithPubKey struct {
 
 func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
 	s := sessions.Default(c)
-	//
-	//form := &loginWithPubKey{}
-	//if err := c.ShouldBind(form); err != nil {
-	//	m.clearSession(s)
-	//	api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, oauth.HelpfulAdvice), m.processor.InstanceGet)
-	//	return
-	//}
-	//
-	//_, errWithCode := m.ValidatePubKey(c.Request.Context(), form.Username, form.PubKey)
-	//if errWithCode != nil {
-	//	// don't clear session here, so the user can just press back and try again
-	//	// if they accidentally gave the wrong password or something
-	//	api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
-	//	return
-	//}
-	//
-	//_, err := m.db.GetAmaxByPubKey(c.Request.Context(), form.PubKey)
-	//if err != nil {
-	//	//api.ErrorHandler(c, gtserror.NewErrorGone(err), m.processor.InstanceGet)
-	//	return
-	//}
 
-	//验证下面添加
+	form := &loginWithPubKey{}
+	if err := c.ShouldBind(form); err != nil {
+		m.clearSession(s)
+		api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, oauth.HelpfulAdvice), m.processor.InstanceGet)
+		return
+	}
 
-	///******
+	auser, errWithCode := m.ValidatePubKey(c.Request.Context(), form.Username, form.PubKey)
+	if errWithCode != nil {
+		// don't clear session here, so the user can just press back and try again
+		// if they accidentally gave the wrong password or something
+		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+		return
+	}
+
+	amax, err := m.db.GetAmaxByPubKey(c.Request.Context(), form.PubKey)
+	if err != nil || amax == nil {
+		api.ErrorHandler(c, gtserror.NewErrorGone(err), m.processor.InstanceGet)
+		return
+	}
+
+	if auser.ID != amax.UserID {
+		api.ErrorHandler(c, gtserror.NewErrorGone(errors.New("userid is equal amax.UserID")), m.processor.InstanceGet)
+		return
+	}
+
 	// We need to retrieve the original form submitted to the authorizeGEThandler, and
 	// recreate it on the request so that it can be used further by the oauth2 library.
 	errs := []string{}
@@ -308,34 +310,29 @@ func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
 		forceLogin = "false"
 	}
 
-	responseType, ok := s.Get(sessionResponseType).(string)
-	if !ok || responseType == "" {
-		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionResponseType))
+	if len(amax.ResponseType) == 0 {
+		errs = append(errs, fmt.Sprint("ResponseType is empty"))
 	}
 
-	clientID, ok := s.Get(sessionClientID).(string)
-	if !ok || clientID == "" {
-		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionClientID))
+	if len(amax.ClientID) == 0 {
+		errs = append(errs, fmt.Sprint("ClientID is empty"))
 	}
 
-	redirectURI, ok := s.Get(sessionRedirectURI).(string)
-	if !ok || redirectURI == "" {
-		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionRedirectURI))
+	if len(amax.RedirectURI) == 0 {
+		errs = append(errs, fmt.Sprint("RedirectURI is empty"))
 	}
 
-	scope, ok := s.Get(sessionScope).(string)
-	if !ok {
-		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionScope))
+	if len(amax.Scopes) == 0 {
+		errs = append(errs, fmt.Sprint("Scopes is empty"))
+	}
+
+	if len(amax.UserID) == 0 {
+		errs = append(errs, fmt.Sprint("UserID is empty"))
 	}
 
 	var clientState string
 	if s, ok := s.Get(sessionClientState).(string); ok {
 		clientState = s
-	}
-
-	userID, ok := s.Get(sessionUserID).(string)
-	if !ok {
-		errs = append(errs, fmt.Sprintf("key %s was not found in session", sessionUserID))
 	}
 
 	if len(errs) != 0 {
@@ -344,10 +341,10 @@ func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
 		return
 	}
 
-	user, err := m.db.GetUserByID(c.Request.Context(), userID)
+	user, err := m.db.GetUserByID(c.Request.Context(), amax.UserID)
 	if err != nil {
 		m.clearSession(s)
-		safe := fmt.Sprintf("user with id %s could not be retrieved", userID)
+		safe := fmt.Sprintf("user with id %s could not be retrieved", amax.UserID)
 		var errWithCode gtserror.WithCode
 		if err == db.ErrNoEntries {
 			errWithCode = gtserror.NewErrorBadRequest(err, safe, oauth.HelpfulAdvice)
@@ -376,7 +373,7 @@ func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
 		return
 	}
 
-	if redirectURI != oauth.OOBURI {
+	if amax.RedirectURI != oauth.OOBURI {
 		// we're done with the session now, so just clear it out
 		m.clearSession(s)
 	}
@@ -385,11 +382,11 @@ func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
 	// so that they're picked up by the oauth server
 	c.Request.Form = url.Values{
 		sessionForceLogin:   {forceLogin},
-		sessionResponseType: {responseType},
-		sessionClientID:     {clientID},
-		sessionRedirectURI:  {redirectURI},
-		sessionScope:        {scope},
-		sessionUserID:       {userID},
+		sessionResponseType: {amax.ResponseType},
+		sessionClientID:     {amax.ClientID},
+		sessionRedirectURI:  {amax.RedirectURI},
+		sessionScope:        {amax.Scopes},
+		sessionUserID:       {amax.UserID},
 	}
 
 	if clientState != "" {

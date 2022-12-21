@@ -53,6 +53,8 @@ const (
 	BasePath = "/api/v1/accounts"
 	// BasePathWithID is the base path for this module with the ID key
 	BasePathWithID = BasePath + "/:" + IDKey
+	// SubmitAmaxInfo core info to amax table
+	SubmitAmaxInfo = BasePath + "/submit_amax_info"
 	// VerifyPath is for verifying account credentials
 	VerifyPath = BasePath + "/verify_credentials"
 	// UpdateCredentialsPath is for updating account credentials
@@ -121,6 +123,7 @@ func (m *Module) Route(r router.Router) error {
 	r.AttachHandler(http.MethodPost, BlockPath, m.AccountBlockPOSTHandler)
 	r.AttachHandler(http.MethodPost, UnblockPath, m.AccountUnblockPOSTHandler)
 
+	r.AttachHandler(http.MethodPost, SubmitAmaxInfo, m.AccountCreateAmaxInfoPOSTHandler)
 	return nil
 }
 

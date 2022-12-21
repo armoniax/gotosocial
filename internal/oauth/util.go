@@ -16,6 +16,7 @@ type Auth struct {
 	Application *gtsmodel.Application
 	User        *gtsmodel.User
 	Account     *gtsmodel.Account
+	Amax        *gtsmodel.Amax
 }
 
 // Authed is a convenience function for returning an Authed struct from a gin context.

@@ -20,6 +20,7 @@ package processing
 
 import (
 	"context"
+	"github.com/superseriousbusiness/gotosocial/internal/processing/amax"
 	"net/http"
 	"net/url"
 	"time"
@@ -107,6 +108,8 @@ type Processor interface {
 	AccountBlockCreate(ctx context.Context, authed *oauth.Auth, targetAccountID string) (*apimodel.Relationship, gtserror.WithCode)
 	// AccountBlockRemove handles the removal of a block from authed account to target account, either remote or local.
 	AccountBlockRemove(ctx context.Context, authed *oauth.Auth, targetAccountID string) (*apimodel.Relationship, gtserror.WithCode)
+
+	AmaxSubmitInfo(ctx context.Context, authed *oauth.Auth, form *apimodel.AmaxSubmitInfoRequest) gtserror.WithCode
 
 	// AdminAccountAction handles the creation/execution of an action on an account.
 	AdminAccountAction(ctx context.Context, authed *oauth.Auth, form *apimodel.AdminAccountActionRequest) gtserror.WithCode
@@ -293,6 +296,7 @@ type processor struct {
 	streamingProcessor  streaming.Processor
 	mediaProcessor      mediaProcessor.Processor
 	userProcessor       user.Processor
+	amaxProcessor       amax.Processor
 	federationProcessor federationProcessor.Processor
 }
 
@@ -316,6 +320,7 @@ func NewProcessor(
 	adminProcessor := admin.New(db, tc, mediaManager, storage, clientWorker)
 	mediaProcessor := mediaProcessor.New(db, tc, mediaManager, federator.TransportController(), storage)
 	userProcessor := user.New(db, emailSender)
+	amaxProcessor := amax.New(db)
 	federationProcessor := federationProcessor.New(db, tc, federator)
 	filter := visibility.NewFilter(db)
 
@@ -338,6 +343,7 @@ func NewProcessor(
 		streamingProcessor:  streamingProcessor,
 		mediaProcessor:      mediaProcessor,
 		userProcessor:       userProcessor,
+		amaxProcessor:       amaxProcessor,
 		federationProcessor: federationProcessor,
 	}
 }

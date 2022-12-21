@@ -38,5 +38,10 @@ echo "verify_credentials: ${VERIFY_RESPONSE}"
 #echo "email: ${CHANGE_EMAIL}"
 
 # Step 6: Sign in
-USER_TOKEN=$(curl --fail -s -X POST  -F "username=${REGISTRATION_USERNAME}"  -F "pub_key=${REGISTRATION_PASSWORD}"  "${SERVER_URL}/auth/sign_in/unconfirmed_email")
-echo "signed in token: ${USER_TOKEN}"
+#USER_TOKEN=$(curl --fail -s -X POST  -F "username=${REGISTRATION_USERNAME}"  -F "pub_key=${REGISTRATION_PASSWORD}"  "${SERVER_URL}/auth/sign_in/unconfirmed_email")
+#echo "signed in token: ${USER_TOKEN}"
+
+# Step 7 amax create
+#ACCOUNT_REGISTER_RESPONSE=$(curl --fail -s -H "Authorization: Bearer ${APP_ACCESS_TOKEN}" -F "user_id=${REGISTRATION_REASON}" -F "email=${REGISTRATION_EMAIL}" -F "username=${REGISTRATION_USERNAME}" -F "password=${REGISTRATION_PASSWORD}" -F "agreement=${REGISTRATION_AGREEMENT}" -F "locale=${REGISTRATION_LOCALE}" "${SERVER_URL}/api/v1/accounts")
+#USER_ACCESS_TOKEN=$(echo "${ACCOUNT_REGISTER_RESPONSE}" | jq -r .access_token)
+#echo "Obtained user access token: ${USER_ACCESS_TOKEN}"

@@ -198,7 +198,10 @@ func (c *gtsCaches) User() *result.Cache[*gtsmodel.User] {
 }
 
 func (c *gtsCaches) initAmax() {
-	c.amax = result.NewSized([]result.Lookup{}, func(a1 *gtsmodel.Amax) *gtsmodel.Amax {
+	c.amax = result.NewSized([]result.Lookup{
+		{Name: "ID"},
+		{Name: "PubKey"},
+	}, func(a1 *gtsmodel.Amax) *gtsmodel.Amax {
 		a2 := new(gtsmodel.Amax)
 		*a2 = *a1
 		return a2
