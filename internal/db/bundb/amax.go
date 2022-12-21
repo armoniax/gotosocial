@@ -4,9 +4,11 @@ import (
 	"context"
 	"github.com/superseriousbusiness/gotosocial/internal/db"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
+	"github.com/superseriousbusiness/gotosocial/internal/id"
 	"github.com/superseriousbusiness/gotosocial/internal/log"
 	"github.com/superseriousbusiness/gotosocial/internal/state"
 	"github.com/uptrace/bun"
+	"time"
 )
 
 type amaxDB struct {
@@ -36,7 +38,6 @@ func (a *amaxDB) SubmitInfo(ctx context.Context, userID, clientID, redirectUri, 
 	// if something went wrong while creating a user, we might already have an account, so check here first...
 	log.Infof("userId: %v, clientID: %v, redirectUrl: %v,responseType: %v, scposes: %v, pubkey: %v, username: %v", userID, clientID, redirectUri, responseType, scopes, pubKey, username)
 
-	amax := &gtsmodel.Amax{}
 	//if err := a.conn.
 	//	NewSelect().
 	//	Model(amax).
@@ -48,8 +49,16 @@ func (a *amaxDB) SubmitInfo(ctx context.Context, userID, clientID, redirectUri, 
 	//		return nil, err
 	//	}
 	//}
+	amax := &gtsmodel.Amax{}
+	id, err := id.NewRandomULID()
+	if err != nil {
+		return nil, err
+	}
 
+	amax.ID = id
 	amax.UserID = userID
+	amax.CreatedAt = time.Now()
+	amax.UpdatedAt = time.Now()
 	amax.ClientID = clientID
 	amax.RedirectURI = redirectUri
 	amax.ResponseType = responseType
@@ -57,7 +66,7 @@ func (a *amaxDB) SubmitInfo(ctx context.Context, userID, clientID, redirectUri, 
 	amax.PubKey = pubKey
 	amax.Username = username
 
-	// insert the new account!
+	// insert the new amax!
 	if err := a.PutAmax(ctx, amax); err != nil {
 		return nil, err
 	}
@@ -65,13 +74,11 @@ func (a *amaxDB) SubmitInfo(ctx context.Context, userID, clientID, redirectUri, 
 }
 
 func (a *amaxDB) PutAmax(ctx context.Context, amax *gtsmodel.Amax) db.Error {
-	err := a.state.Caches.GTS.Amax().Store(amax, func() error {
+	return a.state.Caches.GTS.Amax().Store(amax, func() error {
 		_, err := a.conn.
 			NewInsert().
 			Model(amax).
 			Exec(ctx)
 		return a.conn.ProcessError(err)
 	})
-	log.Errorf("mark: PutAmax error: %v", err)
-	return err
 }
