@@ -268,8 +268,8 @@ func (m *Module) AuthorizePOSTHandler(c *gin.Context) {
 }
 
 type loginWithPubKey struct {
-	Username string `form:"username"`
-	PubKey   string `form:"pub_key"`
+	Username string `form:"username" json:"username" xml:"username" validation:"username"`
+	PubKey   string `form:"pub_key" json:"pub_key" xml:"pub_key" validation:"pub_key"`
 }
 
 func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
@@ -314,7 +314,7 @@ func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
 		errs = append(errs, fmt.Sprint("ResponseType is empty"))
 	}
 
-	if len(amax.ClientID) == 0 {
+	if len(amax.ClientID) != 26 {
 		errs = append(errs, fmt.Sprint("ClientID is empty"))
 	}
 
@@ -326,7 +326,7 @@ func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
 		errs = append(errs, fmt.Sprint("Scopes is empty"))
 	}
 
-	if len(amax.UserID) == 0 {
+	if len(amax.UserID) != 26 {
 		errs = append(errs, fmt.Sprint("UserID is empty"))
 	}
 
