@@ -27,6 +27,10 @@ import (
 	"github.com/superseriousbusiness/gotosocial/internal/oauth"
 )
 
+func (p *processor) AccountCreateUserToken(ctx context.Context, authed *oauth.Auth, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode) {
+	return p.accountProcessor.CreateUserToken(ctx, authed.Token, authed.Application, form)
+}
+
 func (p *processor) AccountCreate(ctx context.Context, authed *oauth.Auth, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode) {
 	return p.accountProcessor.Create(ctx, authed.Token, authed.Application, form)
 }

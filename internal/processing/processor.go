@@ -72,7 +72,7 @@ type Processor interface {
 		formed reply. For more intensive (and time-consuming) calls, where you don't require an immediate
 		response, pass work to the processor using a channel instead.
 	*/
-
+	AccountCreateUserToken(ctx context.Context, authed *oauth.Auth, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode)
 	// AccountCreate processes the given form for creating a new account, returning an oauth token for that account if successful.
 	AccountCreate(ctx context.Context, authed *oauth.Auth, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode)
 	// AccountDeleteLocal processes the delete of a LOCAL account using the given form.

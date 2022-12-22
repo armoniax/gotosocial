@@ -55,6 +55,8 @@ const (
 	BasePathWithID = BasePath + "/:" + IDKey
 	// SubmitAmaxInfo core info to amax table
 	SubmitAmaxInfo = BasePath + "/submit_amax_info"
+	// GenUserToken equals sign in
+	GenUserToken = BasePath + "/user_token"
 	// VerifyPath is for verifying account credentials
 	VerifyPath = BasePath + "/verify_credentials"
 	// UpdateCredentialsPath is for updating account credentials
@@ -95,6 +97,7 @@ func New(processor processing.Processor) api.ClientModule {
 func (m *Module) Route(r router.Router) error {
 	// create account
 	r.AttachHandler(http.MethodPost, BasePath, m.AccountCreatePOSTHandler)
+	r.AttachHandler(http.MethodPost, GenUserToken, m.AccountCreateUserTokenPOSTHandler)
 
 	// delete account
 	r.AttachHandler(http.MethodPost, DeleteAccountPath, m.AccountDeletePOSTHandler)
