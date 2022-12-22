@@ -11,7 +11,7 @@ import (
 )
 
 func (m *Module) AccountCreateAmaxInfoPOSTHandler(c *gin.Context) {
-	authed, err := oauth.Authed(c, true, true, true, true)
+	_, err := oauth.Authed(c, true, true, true, true)
 	if err != nil {
 		api.ErrorHandler(c, gtserror.NewErrorUnauthorized(err, err.Error()), m.processor.InstanceGet)
 		return
@@ -33,12 +33,12 @@ func (m *Module) AccountCreateAmaxInfoPOSTHandler(c *gin.Context) {
 		return
 	}
 
-	errWithCode := m.processor.AmaxSubmitInfo(c.Request.Context(), authed, form)
+	amax, errWithCode := m.processor.AmaxSubmitInfo(c.Request.Context(), form)
 	if errWithCode != nil {
 		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
 		return
 	}
-	c.JSON(http.StatusOK, "success!")
+	c.JSON(http.StatusOK, amax)
 }
 
 func validateCreateAmax(form *model.AmaxSubmitInfoRequest) error {
@@ -46,8 +46,8 @@ func validateCreateAmax(form *model.AmaxSubmitInfoRequest) error {
 		return errors.New("form is nil")
 	}
 
-	if len(form.ClientID) != 26 {
-		return errors.Errorf("client_id length is not correct: %v", form.ClientID)
+	if len(form.ClientId) != 26 {
+		return errors.Errorf("client_id length is not correct: %v", form.ClientId)
 	}
 
 	return nil

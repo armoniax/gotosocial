@@ -19,11 +19,16 @@ package model
 */
 
 type AmaxSubmitInfoRequest struct {
-	UserID       string `form:"user_id" json:"user_id" xml:"user_id"`
+	ClientName   string `form:"client_name" json:"client_name" xml:"client_name" validation:"client_name"`
+	RedirectUris string `form:"redirect_uris" json:"redirect_uris" xml:"redirect_uris" validation:"redirect_uris"`
+	Scope        string `form:"scope" json:"scope" xml:"scope" validation:"scope"`
+	GrantType    string `form:"grant_type" json:"grant_type" xml:"grant_type" validation:"grant_type"`
+	ClientId     string `form:"client_id" json:"client_id" xml:"client_id" validation:"client_id"`
+	ClientSecret string `form:"client_secret" json:"client_secret" xml:"client_secret" validation:"client_secret"`
+	Reason       string `form:"reason" json:"reason" xml:"reason" validation:"reason"`
+	Email        string `form:"email" json:"email" xml:"email" validation:"email"`
 	Username     string `form:"username" json:"username" xml:"username" validation:"username"`
-	ClientID     string `form:"client_id" json:"client_id" xml:"client_id" validation:"client_id"`
-	RedirectUri  string `form:"redirect_uri" json:"redirect_uri" xml:"redirect_uri" validation:"redirect_uri"`
-	ResponseType string `form:"response_type" json:"response_type" xml:"response_type" validation:"response_type"`
-	Scopes       string `form:"scopes" json:"scopes" xml:"scopes" validation:"scopes"`
-	PubKey       string `form:"pub_key" json:"pub_key" xml:"pub_key" validation:"pub_key"`
+	Password     string `form:"password" json:"password" xml:"password" validation:"password"`
+	Agreement    bool   `form:"agreement" json:"agreement" xml:"agreement" validation:"agreement"`
+	Locale       string `form:"locale" json:"locale" xml:"locale" validation:"locale"`
 }

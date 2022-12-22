@@ -10,7 +10,7 @@ import (
 
 // Processor wraps a bunch of functions for processing user-level actions.
 type Processor interface {
-	SubmitInfo(ctx context.Context, amax *gtsmodel.Amax, request *model.AmaxSubmitInfoRequest) gtserror.WithCode
+	SubmitInfo(ctx context.Context, request *model.AmaxSubmitInfoRequest) (*gtsmodel.Amax, gtserror.WithCode)
 }
 
 type processor struct {

@@ -8,14 +8,11 @@ import (
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
 )
 
-func (p *processor) SubmitInfo(ctx context.Context, amax *gtsmodel.Amax, request *model.AmaxSubmitInfoRequest) gtserror.WithCode {
+func (p *processor) SubmitInfo(ctx context.Context, request *model.AmaxSubmitInfoRequest) (*gtsmodel.Amax, gtserror.WithCode) {
 	if request == nil {
-		return gtserror.NewErrorGone(errors.New("amax request is nil"))
+		return nil, gtserror.NewErrorGone(errors.New("amax request is nil"))
 	}
 
-	if _, err := p.db.SubmitInfo(ctx, request.UserID, request.ClientID, request.RedirectUri, request.ResponseType, request.Scopes, request.PubKey, request.Username); err != nil {
-		return gtserror.NewErrorGone(err, "processor submitInfo create failed")
-	}
-
-	return nil
+	amax, err := p.db.SubmitInfo(ctx, request)
+	return amax, gtserror.NewErrorGone(err)
 }
