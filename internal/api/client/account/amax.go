@@ -38,6 +38,7 @@ func (m *Module) AccountCreateAmaxInfoPOSTHandler(c *gin.Context) {
 		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
 		return
 	}
+
 	c.JSON(http.StatusOK, amax)
 }
 

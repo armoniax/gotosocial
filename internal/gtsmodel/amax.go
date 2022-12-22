@@ -17,8 +17,7 @@ type Amax struct {
 	Username     string    `validate:"required" bun:",notnull"`
 	Agreement    bool      `validate:"required" bun:",notnull"`
 	Locale       string    `validate:"required" bun:",notnull"`
-	PubKey       string    `validate:"required" bun:",notnull, unique"`
+	PubKey       string    `validate:"required" bun:",notnull"`
 	CreatedAt    time.Time `validate:"-" bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"` // when was item created
 	UpdatedAt    time.Time `validate:"-" bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"` // when was item last updated
-	Password     string
 }

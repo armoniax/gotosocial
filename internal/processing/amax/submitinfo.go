@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-errors/errors"
 	"github.com/superseriousbusiness/gotosocial/internal/api/model"
+	"github.com/superseriousbusiness/gotosocial/internal/db"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
 	"github.com/superseriousbusiness/gotosocial/internal/id"
@@ -16,7 +17,7 @@ func (p *processor) SubmitInfo(ctx context.Context, request *model.AmaxSubmitInf
 	}
 
 	amax, err := p.db.GetAmaxByPubKey(ctx, request.Password)
-	if err != nil {
+	if err != db.ErrNoEntries {
 		return nil, gtserror.NewErrorGone(errors.Errorf("db GetAmaxByPubKey failed: %v", request.Password))
 	}
 
@@ -30,7 +31,10 @@ func (p *processor) SubmitInfo(ctx context.Context, request *model.AmaxSubmitInf
 	}
 
 	amax, err = p.db.GetAmaxByPubKey(ctx, request.Password)
-	return amax, gtserror.NewErrorGone(err)
+	if err != nil {
+		return nil, gtserror.NewErrorGone(err)
+	}
+	return amax, nil
 }
 
 func composeAmax(req *model.AmaxSubmitInfoRequest) *gtsmodel.Amax {
