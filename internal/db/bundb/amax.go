@@ -23,8 +23,7 @@ func (a *amaxDB) GetAmaxByPubKey(ctx context.Context, pubKey string) (*gtsmodel.
 		q := a.conn.
 			NewSelect().
 			Model(&amax).
-			Relation("Account").
-			Where("? = ?", bun.Ident("user.pub_key"), pubKey)
+			Where("? = ?", bun.Ident("amax.pub_key"), pubKey)
 
 		if err := q.Scan(ctx); err != nil {
 			return nil, a.conn.ProcessError(err)

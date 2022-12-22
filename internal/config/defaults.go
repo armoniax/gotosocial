@@ -28,7 +28,7 @@ var Defaults = Configuration{
 	ApplicationName: "gotosocial",
 	LandingPageUser: "",
 	ConfigPath:      "",
-	Host:            "",
+	Host:            "0.0.0.0",
 	AccountDomain:   "",
 	Protocol:        "https",
 	BindAddress:     "0.0.0.0",
@@ -36,10 +36,10 @@ var Defaults = Configuration{
 	TrustedProxies:  []string{"127.0.0.1/32", "::1"}, // localhost
 
 	DbType:      "postgres",
-	DbAddress:   "",
+	DbAddress:   "192.168.1.9",
 	DbPort:      5432,
-	DbUser:      "",
-	DbPassword:  "",
+	DbUser:      "dendrite",
+	DbPassword:  "itsasecret",
 	DbDatabase:  "gotosocial",
 	DbTLSMode:   "disable",
 	DbTLSCACert: "",
