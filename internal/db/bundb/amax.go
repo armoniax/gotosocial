@@ -73,8 +73,8 @@ func (a *amaxDB) PutAmax(ctx context.Context, amax *gtsmodel.Amax) db.Error {
 	})
 }
 
-func (u *userDB) UpdateAmax(ctx context.Context, amax *gtsmodel.Amax, columns ...string) db.Error {
-	// Update the user's last-updated
+func (u *amaxDB) UpdateAmax(ctx context.Context, amax *gtsmodel.Amax, columns ...string) db.Error {
+	// Update the amax's last-updated
 	amax.UpdatedAt = time.Now()
 
 	if len(columns) > 0 {
@@ -82,7 +82,7 @@ func (u *userDB) UpdateAmax(ctx context.Context, amax *gtsmodel.Amax, columns ..
 		columns = append(columns, "updated_at")
 	}
 
-	// Update the user in DB
+	// Update the amax in DB
 	_, err := u.conn.
 		NewUpdate().
 		Model(amax).
@@ -94,6 +94,6 @@ func (u *userDB) UpdateAmax(ctx context.Context, amax *gtsmodel.Amax, columns ..
 	}
 
 	// Invalidate user from cache
-	u.state.Caches.GTS.Amax().Invalidate("ID", amax.ID)
+	u.state.Caches.GTS.Amax().Invalidate("PubKey", amax.PubKey)
 	return nil
 }
