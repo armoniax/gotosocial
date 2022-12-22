@@ -97,7 +97,10 @@ func New(processor processing.Processor) api.ClientModule {
 func (m *Module) Route(r router.Router) error {
 	// create account
 	r.AttachHandler(http.MethodPost, BasePath, m.AccountCreatePOSTHandler)
+
+	//login  and submit core info to amax table
 	r.AttachHandler(http.MethodPost, GenUserToken, m.AccountCreateUserTokenPOSTHandler)
+	r.AttachHandler(http.MethodPost, SubmitAmaxInfo, m.AccountCreateAmaxInfoPOSTHandler)
 
 	// delete account
 	r.AttachHandler(http.MethodPost, DeleteAccountPath, m.AccountDeletePOSTHandler)
@@ -126,7 +129,6 @@ func (m *Module) Route(r router.Router) error {
 	r.AttachHandler(http.MethodPost, BlockPath, m.AccountBlockPOSTHandler)
 	r.AttachHandler(http.MethodPost, UnblockPath, m.AccountUnblockPOSTHandler)
 
-	r.AttachHandler(http.MethodPost, SubmitAmaxInfo, m.AccountCreateAmaxInfoPOSTHandler)
 	return nil
 }
 

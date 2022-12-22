@@ -272,131 +272,131 @@ type loginWithPubKey struct {
 	PubKey   string `form:"pub_key" json:"pub_key" xml:"pub_key" validation:"pub_key"`
 }
 
-func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
-	s := sessions.Default(c)
-
-	form := &loginWithPubKey{}
-	if err := c.ShouldBind(form); err != nil {
-		m.clearSession(s)
-		api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, oauth.HelpfulAdvice), m.processor.InstanceGet)
-		return
-	}
-
-	auser, errWithCode := m.ValidatePubKey(c.Request.Context(), form.Username, form.PubKey)
-	if errWithCode != nil {
-		// don't clear session here, so the user can just press back and try again
-		// if they accidentally gave the wrong password or something
-		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
-		return
-	}
-
-	amax, err := m.db.GetAmaxByPubKey(c.Request.Context(), form.PubKey)
-	if err != nil || amax == nil {
-		api.ErrorHandler(c, gtserror.NewErrorGone(err), m.processor.InstanceGet)
-		return
-	}
-
-	if auser.ID != amax.UserID {
-		api.ErrorHandler(c, gtserror.NewErrorGone(errors.New("userid is equal amax.UserID")), m.processor.InstanceGet)
-		return
-	}
-
-	// We need to retrieve the original form submitted to the authorizeGEThandler, and
-	// recreate it on the request so that it can be used further by the oauth2 library.
-	errs := []string{}
-
-	forceLogin, ok := s.Get(sessionForceLogin).(string)
-	if !ok {
-		forceLogin = "false"
-	}
-
-	if len(amax.ResponseType) == 0 {
-		errs = append(errs, fmt.Sprint("ResponseType is empty"))
-	}
-
-	if len(amax.ClientID) != 26 {
-		errs = append(errs, fmt.Sprint("ClientID is empty"))
-	}
-
-	if len(amax.RedirectURI) == 0 {
-		errs = append(errs, fmt.Sprint("RedirectURI is empty"))
-	}
-
-	if len(amax.Scopes) == 0 {
-		errs = append(errs, fmt.Sprint("Scopes is empty"))
-	}
-
-	if len(amax.UserID) != 26 {
-		errs = append(errs, fmt.Sprint("UserID is empty"))
-	}
-
-	var clientState string
-	if s, ok := s.Get(sessionClientState).(string); ok {
-		clientState = s
-	}
-
-	if len(errs) != 0 {
-		errs = append(errs, oauth.HelpfulAdvice)
-		api.ErrorHandler(c, gtserror.NewErrorBadRequest(errors.New("one or more missing keys on session during AuthorizePOSTHandler"), errs...), m.processor.InstanceGet)
-		return
-	}
-
-	user, err := m.db.GetUserByID(c.Request.Context(), amax.UserID)
-	if err != nil {
-		m.clearSession(s)
-		safe := fmt.Sprintf("user with id %s could not be retrieved", amax.UserID)
-		var errWithCode gtserror.WithCode
-		if err == db.ErrNoEntries {
-			errWithCode = gtserror.NewErrorBadRequest(err, safe, oauth.HelpfulAdvice)
-		} else {
-			errWithCode = gtserror.NewErrorInternalError(err, safe, oauth.HelpfulAdvice)
-		}
-		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
-		return
-	}
-
-	acct, err := m.db.GetAccountByID(c.Request.Context(), user.AccountID)
-	if err != nil {
-		m.clearSession(s)
-		safe := fmt.Sprintf("account with id %s could not be retrieved", user.AccountID)
-		var errWithCode gtserror.WithCode
-		if err == db.ErrNoEntries {
-			errWithCode = gtserror.NewErrorBadRequest(err, safe, oauth.HelpfulAdvice)
-		} else {
-			errWithCode = gtserror.NewErrorInternalError(err, safe, oauth.HelpfulAdvice)
-		}
-		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
-		return
-	}
-
-	if acct.ID == "" {
-		return
-	}
-
-	if amax.RedirectURI != oauth.OOBURI {
-		// we're done with the session now, so just clear it out
-		m.clearSession(s)
-	}
-
-	// we have to set the values on the request form
-	// so that they're picked up by the oauth server
-	c.Request.Form = url.Values{
-		sessionForceLogin:   {forceLogin},
-		sessionResponseType: {amax.ResponseType},
-		sessionClientID:     {amax.ClientID},
-		sessionRedirectURI:  {amax.RedirectURI},
-		sessionScope:        {amax.Scopes},
-		sessionUserID:       {amax.UserID},
-	}
-
-	if clientState != "" {
-		c.Request.Form.Set("state", clientState)
-	}
-
-	if errWithCode := m.processor.OAuthHandleAuthorizeRequest(c.Writer, c.Request); errWithCode != nil {
-		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
-	}
-}
+//func (m *Module) AuthorizeUnconfirmedEmailPOSTHandler(c *gin.Context) {
+//	s := sessions.Default(c)
+//
+//	form := &loginWithPubKey{}
+//	if err := c.ShouldBind(form); err != nil {
+//		m.clearSession(s)
+//		api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, oauth.HelpfulAdvice), m.processor.InstanceGet)
+//		return
+//	}
+//
+//	auser, errWithCode := m.ValidatePubKey(c.Request.Context(), form.Username, form.PubKey)
+//	if errWithCode != nil {
+//		// don't clear session here, so the user can just press back and try again
+//		// if they accidentally gave the wrong password or something
+//		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+//		return
+//	}
+//
+//	amax, err := m.db.GetAmaxByPubKey(c.Request.Context(), form.PubKey)
+//	if err != nil || amax == nil {
+//		api.ErrorHandler(c, gtserror.NewErrorGone(err), m.processor.InstanceGet)
+//		return
+//	}
+//
+//	if auser.ID != amax.UserID {
+//		api.ErrorHandler(c, gtserror.NewErrorGone(errors.New("userid is equal amax.UserID")), m.processor.InstanceGet)
+//		return
+//	}
+//
+//	// We need to retrieve the original form submitted to the authorizeGEThandler, and
+//	// recreate it on the request so that it can be used further by the oauth2 library.
+//	errs := []string{}
+//
+//	forceLogin, ok := s.Get(sessionForceLogin).(string)
+//	if !ok {
+//		forceLogin = "false"
+//	}
+//
+//	if len(amax.ResponseType) == 0 {
+//		errs = append(errs, fmt.Sprint("ResponseType is empty"))
+//	}
+//
+//	if len(amax.ClientID) != 26 {
+//		errs = append(errs, fmt.Sprint("ClientID is empty"))
+//	}
+//
+//	if len(amax.RedirectURI) == 0 {
+//		errs = append(errs, fmt.Sprint("RedirectURI is empty"))
+//	}
+//
+//	if len(amax.Scopes) == 0 {
+//		errs = append(errs, fmt.Sprint("Scopes is empty"))
+//	}
+//
+//	if len(amax.UserID) != 26 {
+//		errs = append(errs, fmt.Sprint("UserID is empty"))
+//	}
+//
+//	var clientState string
+//	if s, ok := s.Get(sessionClientState).(string); ok {
+//		clientState = s
+//	}
+//
+//	if len(errs) != 0 {
+//		errs = append(errs, oauth.HelpfulAdvice)
+//		api.ErrorHandler(c, gtserror.NewErrorBadRequest(errors.New("one or more missing keys on session during AuthorizePOSTHandler"), errs...), m.processor.InstanceGet)
+//		return
+//	}
+//
+//	user, err := m.db.GetUserByID(c.Request.Context(), amax.UserID)
+//	if err != nil {
+//		m.clearSession(s)
+//		safe := fmt.Sprintf("user with id %s could not be retrieved", amax.UserID)
+//		var errWithCode gtserror.WithCode
+//		if err == db.ErrNoEntries {
+//			errWithCode = gtserror.NewErrorBadRequest(err, safe, oauth.HelpfulAdvice)
+//		} else {
+//			errWithCode = gtserror.NewErrorInternalError(err, safe, oauth.HelpfulAdvice)
+//		}
+//		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+//		return
+//	}
+//
+//	acct, err := m.db.GetAccountByID(c.Request.Context(), user.AccountID)
+//	if err != nil {
+//		m.clearSession(s)
+//		safe := fmt.Sprintf("account with id %s could not be retrieved", user.AccountID)
+//		var errWithCode gtserror.WithCode
+//		if err == db.ErrNoEntries {
+//			errWithCode = gtserror.NewErrorBadRequest(err, safe, oauth.HelpfulAdvice)
+//		} else {
+//			errWithCode = gtserror.NewErrorInternalError(err, safe, oauth.HelpfulAdvice)
+//		}
+//		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+//		return
+//	}
+//
+//	if acct.ID == "" {
+//		return
+//	}
+//
+//	if amax.RedirectURI != oauth.OOBURI {
+//		// we're done with the session now, so just clear it out
+//		m.clearSession(s)
+//	}
+//
+//	// we have to set the values on the request form
+//	// so that they're picked up by the oauth server
+//	c.Request.Form = url.Values{
+//		sessionForceLogin:   {forceLogin},
+//		sessionResponseType: {amax.ResponseType},
+//		sessionClientID:     {amax.ClientID},
+//		sessionRedirectURI:  {amax.RedirectURI},
+//		sessionScope:        {amax.Scopes},
+//		sessionUserID:       {amax.UserID},
+//	}
+//
+//	if clientState != "" {
+//		c.Request.Form.Set("state", clientState)
+//	}
+//
+//	if errWithCode := m.processor.OAuthHandleAuthorizeRequest(c.Writer, c.Request); errWithCode != nil {
+//		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+//	}
+//}
 
 // saveAuthFormToSession checks the given OAuthAuthorize form,
 // and stores the values in the form into the session.
