@@ -2,10 +2,8 @@ package bundb
 
 import (
 	"context"
-	"github.com/superseriousbusiness/gotosocial/internal/api/model"
 	"github.com/superseriousbusiness/gotosocial/internal/db"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
-	"github.com/superseriousbusiness/gotosocial/internal/id"
 	"github.com/superseriousbusiness/gotosocial/internal/state"
 	"github.com/uptrace/bun"
 	"time"
@@ -31,36 +29,6 @@ func (a *amaxDB) GetAmaxByPubKey(ctx context.Context, pubKey string) (*gtsmodel.
 
 		return &amax, nil
 	}, pubKey)
-}
-
-func (a *amaxDB) SubmitInfo(ctx context.Context, req *model.AmaxSubmitInfoRequest) (*gtsmodel.Amax, db.Error) {
-	amax := &gtsmodel.Amax{}
-	id, err := id.NewRandomULID()
-	if err != nil {
-		return nil, err
-	}
-
-	amax.ID = id
-	amax.CreatedAt = time.Now()
-	amax.UpdatedAt = time.Now()
-	amax.ClientName = req.ClientName
-	amax.RedirectUri = req.RedirectUris
-	amax.Scope = req.Scope
-	amax.GrantType = req.GrantType
-	amax.ClientId = req.ClientId
-	amax.ClientSecret = req.ClientSecret
-	amax.Reason = req.Reason
-	amax.Email = req.Email
-	amax.Username = req.Username
-	amax.Agreement = req.Agreement
-	amax.Locale = req.Locale
-	amax.PubKey = req.Password
-
-	// insert the new amax!
-	if err := a.PutAmax(ctx, amax); err != nil {
-		return nil, err
-	}
-	return amax, nil
 }
 
 func (a *amaxDB) PutAmax(ctx context.Context, amax *gtsmodel.Amax) db.Error {
@@ -93,7 +61,7 @@ func (u *amaxDB) UpdateAmax(ctx context.Context, amax *gtsmodel.Amax, columns ..
 		return u.conn.ProcessError(err)
 	}
 
-	// Invalidate user from cache
+	// Invalidate amax from cache
 	u.state.Caches.GTS.Amax().Invalidate("PubKey", amax.PubKey)
 	return nil
 }
