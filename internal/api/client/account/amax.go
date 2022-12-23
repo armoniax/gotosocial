@@ -1,14 +1,22 @@
 package account
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-errors/errors"
 	"github.com/superseriousbusiness/gotosocial/internal/api"
+	"github.com/superseriousbusiness/gotosocial/internal/api/client/app"
+	"github.com/superseriousbusiness/gotosocial/internal/api/client/auth"
 	"github.com/superseriousbusiness/gotosocial/internal/api/model"
+	"github.com/superseriousbusiness/gotosocial/internal/config"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
+	"github.com/superseriousbusiness/gotosocial/internal/log"
 	"github.com/superseriousbusiness/gotosocial/internal/oauth"
+	"io"
 	"net"
 	"net/http"
 )
@@ -116,6 +124,7 @@ func (m *Module) AccountSignatureLoginPOSTHandler(c *gin.Context) {
 	}
 
 	user, errWithCode := m.amaxSignatureLogin(c.Request.Context(), form)
+	//user, errWithCode := m.processor.AmaxSignatureLogin(c.Request.Context(), form)
 	if errWithCode != nil {
 		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
 		return
@@ -124,9 +133,9 @@ func (m *Module) AccountSignatureLoginPOSTHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatureLoginRequest) (*gtsmodel.User, gtserror.WithCode) {
+func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatureLoginRequest) (*model.Account, gtserror.WithCode) {
 	if len(form.PubKey) == 0 {
-		return nil, gtserror.NewErrorGone(errors.New("form PubKey is empty"))
+		return nil, gtserror.NewError(errors.New("form PubKey is empty"))
 	}
 
 	notFound := "no entries"
@@ -134,7 +143,7 @@ func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatu
 
 	switch {
 	case err != nil && err.Error() == notFound:
-		return m.register(amax)
+		return m.register(form)
 	case err == nil && amax != nil:
 		return m.login(amax)
 	default:
@@ -142,15 +151,168 @@ func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatu
 	}
 }
 
-func (m *Module) register(amax *gtsmodel.Amax) (*gtsmodel.User, gtserror.WithCode) {
-	//CREATE_APP_RESPONSE=$(curl --fail -s -X POST -F "client_name=${CLIENT_NAME}" -F "redirect_uris=${REDIRECT_URI}" "${SERVER_URL}/api/v1/apps")
-	return &gtsmodel.User{
-		ID: "register ....",
-	}, nil
+func (m *Module) register(form *model.AmaxSignatureLoginRequest) (*model.Account, gtserror.WithCode) {
+	bindAddress := "http://localhost"
+	port := config.GetPort()
+	addr := fmt.Sprintf("%s:%d", bindAddress, port)
+
+	//# Step 1: create the app to register the new account
+	app, err := createApplication(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	//# Step 2: obtain a code for that app
+	appt, err := createAppToken(addr, app.ClientID, app.ClientSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	//# Step 3: use the code to register a new account
+	appt, err = createUser(addr, appt.AccessToken, form.Username, form.PubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	//# Step 4: verify the returned access token
+	account, err := verifyCredentials(addr, appt.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
 
-func (m *Module) login(amax *gtsmodel.Amax) (*gtsmodel.User, gtserror.WithCode) {
-	return &gtsmodel.User{
+func createApplication(addr string) (*model.Application, gtserror.WithCode) {
+	data := make(map[string]any)
+	data["client_name"] = "amax"
+	data["redirect_uris"] = addr
+	bytesData, err := json.Marshal(data)
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+
+	resp, err := http.Post(addr+app.BasePath, "application/json", bytes.NewReader(bytesData))
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+
+	var cnt bytes.Buffer
+	if _, err = io.Copy(&cnt, resp.Body); err != nil {
+		log.Errorf("application copy failed: %v", err)
+		return nil, gtserror.NewError(err)
+	}
+
+	app := model.Application{}
+	if err = json.Unmarshal(cnt.Bytes(), &app); err != nil {
+		log.Errorf("application Unmarshal failed: %v", err)
+		return nil, gtserror.NewError(err)
+	}
+	return &app, nil
+}
+
+type appToken struct {
+	AccessToken string `json:"access_token"`
+}
+
+func createAppToken(addr, clientId, clientSecret string) (*appToken, gtserror.WithCode) {
+	data := make(map[string]any)
+	data["scope"] = "read"
+	data["grant_type"] = "client_credentials"
+	data["client_id"] = clientId
+	data["client_secret"] = clientSecret
+	data["redirect_uri"] = addr
+	bytesData, err := json.Marshal(data)
+
+	resp, err := http.Post(addr+auth.OauthTokenPath, "application/json", bytes.NewReader(bytesData))
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+
+	var cnt bytes.Buffer
+	if _, err = io.Copy(&cnt, resp.Body); err != nil {
+		log.Errorf("application auth failed: %v", err)
+		return nil, gtserror.NewError(err)
+	}
+
+	appt := appToken{}
+	if err = json.Unmarshal(cnt.Bytes(), &appt); err != nil {
+		log.Errorf("application auth Unmarshal failed: %v", err)
+		return nil, gtserror.NewError(err)
+	}
+	return &appt, nil
+}
+
+func createUser(addr, authStr, username, pubKey string) (*appToken, gtserror.WithCode) {
+	data := make(map[string]any)
+	data["reason"] = "Testing whether or not this dang diggity thing works!"
+	data["username"] = username
+	data["email"] = pubKey + "@amax.com"
+	data["password"] = pubKey
+	data["agreement"] = true
+	data["locale"] = "en"
+	bytesData, err := json.Marshal(data)
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+
+	log.Infof("the value: %+v", data)
+	req, err := http.NewRequest("POST", addr+BasePath, bytes.NewReader(bytesData))
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+authStr)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+
+	var cnt bytes.Buffer
+	if _, err = io.Copy(&cnt, resp.Body); err != nil {
+		log.Errorf("create user copy failed: %v", err)
+		return nil, gtserror.NewError(err)
+	}
+
+	appt := appToken{}
+	if err = json.Unmarshal(cnt.Bytes(), &appt); err != nil {
+		log.Infof("create user Unmarshal: %v", cnt.String())
+		log.Errorf("create user Unmarshal failed: %v", err)
+		return nil, gtserror.NewError(err)
+	}
+	return &appt, nil
+}
+
+func verifyCredentials(addr, authStr string) (*model.Account, gtserror.WithCode) {
+	req, err := http.NewRequest("GET", addr+VerifyPath, http.NoBody)
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+authStr)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+
+	var cnt bytes.Buffer
+	if _, err = io.Copy(&cnt, resp.Body); err != nil {
+		log.Errorf("create user copy failed: %v", err)
+		return nil, gtserror.NewError(err)
+	}
+
+	account := model.Account{}
+	if err = json.Unmarshal(cnt.Bytes(), &account); err != nil {
+		log.Errorf("create user Unmarshal failed: %v", err)
+		return nil, gtserror.NewError(err)
+	}
+	return &account, nil
+}
+
+func (m *Module) login(amax *gtsmodel.Amax) (*model.Account, gtserror.WithCode) {
+	return &model.Account{
 		ID: "login ....",
 	}, nil
 }
