@@ -6,7 +6,9 @@ import (
 	"github.com/superseriousbusiness/gotosocial/internal/api"
 	"github.com/superseriousbusiness/gotosocial/internal/api/model"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
+	"github.com/superseriousbusiness/gotosocial/internal/log"
 	"github.com/superseriousbusiness/gotosocial/internal/oauth"
+	"net"
 	"net/http"
 )
 
@@ -52,4 +54,51 @@ func validateCreateAmax(form *model.AmaxSubmitInfoRequest) error {
 	}
 
 	return nil
+}
+
+func (m *Module) AccountCreateUserTokenPOSTHandler(c *gin.Context) {
+	authed, err := oauth.Authed(c, true, true, false, false)
+	if err != nil {
+		api.ErrorHandler(c, gtserror.NewErrorUnauthorized(err, err.Error()), m.processor.InstanceGet)
+		return
+	}
+
+	if _, err := api.NegotiateAccept(c, api.JSONAcceptHeaders...); err != nil {
+		api.ErrorHandler(c, gtserror.NewErrorNotAcceptable(err, err.Error()), m.processor.InstanceGet)
+		return
+	}
+
+	form := &model.AccountCreateRequest{}
+	if err := c.ShouldBind(form); err != nil {
+		api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGet)
+		return
+	}
+
+	if err := validateCreateAccount(form); err != nil {
+		api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGet)
+		return
+	}
+
+	clientIP := c.ClientIP()
+	signUpIP := net.ParseIP(clientIP)
+	if signUpIP == nil {
+		err := errors.New("ip address could not be parsed from request")
+		api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGet)
+		return
+	}
+	form.IP = signUpIP
+
+	log.Info("userToken: 1")
+
+	ti, errWithCode := m.processor.AccountCreateUserToken(c.Request.Context(), authed, form)
+	if errWithCode != nil {
+		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+		return
+	}
+
+	c.JSON(http.StatusOK, ti)
+}
+
+func (m *Module) AccountSignatureLoginPOSTHandler(c *gin.Context) {
+
 }
