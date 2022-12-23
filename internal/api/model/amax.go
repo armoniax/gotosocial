@@ -32,3 +32,8 @@ type AmaxSubmitInfoRequest struct {
 	Agreement    bool   `form:"agreement" json:"agreement" xml:"agreement" validation:"agreement"`
 	Locale       string `form:"locale" json:"locale" xml:"locale" validation:"locale"`
 }
+
+type AmaxSignatureLoginRequest struct {
+	Username string `form:"username" json:"username" xml:"username" validation:"username"`
+	PubKey   string `form:"pub_key" json:"pub_key" xml:"pub_key" validation:"pub_key"`
+}

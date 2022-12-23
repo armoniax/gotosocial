@@ -10,3 +10,7 @@ import (
 func (p *processor) AmaxSubmitInfo(ctx context.Context, form *apimodel.AmaxSubmitInfoRequest) (*gtsmodel.Amax, gtserror.WithCode) {
 	return p.amaxProcessor.SubmitInfo(ctx, form)
 }
+
+func (p *processor) AmaxSignatureLogin(ctx context.Context, form *apimodel.AmaxSignatureLoginRequest) (*gtsmodel.User, gtserror.WithCode) {
+	return nil, nil
+}

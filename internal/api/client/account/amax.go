@@ -6,7 +6,6 @@ import (
 	"github.com/superseriousbusiness/gotosocial/internal/api"
 	"github.com/superseriousbusiness/gotosocial/internal/api/model"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
-	"github.com/superseriousbusiness/gotosocial/internal/log"
 	"github.com/superseriousbusiness/gotosocial/internal/oauth"
 	"net"
 	"net/http"
@@ -88,8 +87,6 @@ func (m *Module) AccountCreateUserTokenPOSTHandler(c *gin.Context) {
 	}
 	form.IP = signUpIP
 
-	log.Info("userToken: 1")
-
 	ti, errWithCode := m.processor.AccountCreateUserToken(c.Request.Context(), authed, form)
 	if errWithCode != nil {
 		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
@@ -100,5 +97,43 @@ func (m *Module) AccountCreateUserTokenPOSTHandler(c *gin.Context) {
 }
 
 func (m *Module) AccountSignatureLoginPOSTHandler(c *gin.Context) {
+	if _, err := api.NegotiateAccept(c, api.JSONAcceptHeaders...); err != nil {
+		api.ErrorHandler(c, gtserror.NewErrorNotAcceptable(err, err.Error()), m.processor.InstanceGet)
+		return
+	}
 
+	form := &model.AmaxSignatureLoginRequest{}
+	if err := c.ShouldBind(form); err != nil {
+		api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGet)
+		return
+	}
+
+	if err := validateSignatureLoginReq(form); err != nil {
+		api.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGet)
+		return
+	}
+
+	user, errWithCode := m.processor.AmaxSignatureLogin(c.Request.Context(), form)
+	if errWithCode != nil {
+		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func validateSignatureLoginReq(form *model.AmaxSignatureLoginRequest) error {
+	if form == nil {
+		return errors.New("form is nil")
+	}
+
+	if len(form.Username) == 0 {
+		return errors.New("Username is empty")
+	}
+
+	if len(form.PubKey) == 0 {
+		return errors.New("PubKey is empty")
+	}
+
+	return nil
 }
