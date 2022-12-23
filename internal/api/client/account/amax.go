@@ -1,11 +1,13 @@
 package account
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/go-errors/errors"
 	"github.com/superseriousbusiness/gotosocial/internal/api"
 	"github.com/superseriousbusiness/gotosocial/internal/api/model"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
+	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
 	"github.com/superseriousbusiness/gotosocial/internal/oauth"
 	"net"
 	"net/http"
@@ -113,13 +115,44 @@ func (m *Module) AccountSignatureLoginPOSTHandler(c *gin.Context) {
 		return
 	}
 
-	user, errWithCode := m.processor.AmaxSignatureLogin(c.Request.Context(), form)
+	user, errWithCode := m.amaxSignatureLogin(c.Request.Context(), form)
 	if errWithCode != nil {
 		api.ErrorHandler(c, errWithCode, m.processor.InstanceGet)
 		return
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatureLoginRequest) (*gtsmodel.User, gtserror.WithCode) {
+	if len(form.PubKey) == 0 {
+		return nil, gtserror.NewErrorGone(errors.New("form PubKey is empty"))
+	}
+
+	notFound := "no entries"
+	amax, err := m.processor.AmaxGetAmaxByPubKey(ctx, form.PubKey)
+
+	switch {
+	case err != nil && err.Error() == notFound:
+		return m.register(amax)
+	case err == nil && amax != nil:
+		return m.login(amax)
+	default:
+		return nil, err
+	}
+}
+
+func (m *Module) register(amax *gtsmodel.Amax) (*gtsmodel.User, gtserror.WithCode) {
+	//CREATE_APP_RESPONSE=$(curl --fail -s -X POST -F "client_name=${CLIENT_NAME}" -F "redirect_uris=${REDIRECT_URI}" "${SERVER_URL}/api/v1/apps")
+	return &gtsmodel.User{
+		ID: "register ....",
+	}, nil
+}
+
+func (m *Module) login(amax *gtsmodel.Amax) (*gtsmodel.User, gtserror.WithCode) {
+	return &gtsmodel.User{
+		ID: "login ....",
+	}, nil
 }
 
 func validateSignatureLoginReq(form *model.AmaxSignatureLoginRequest) error {

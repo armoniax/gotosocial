@@ -110,8 +110,7 @@ type Processor interface {
 	AccountBlockRemove(ctx context.Context, authed *oauth.Auth, targetAccountID string) (*apimodel.Relationship, gtserror.WithCode)
 
 	AmaxSubmitInfo(ctx context.Context, form *apimodel.AmaxSubmitInfoRequest) (*gtsmodel.Amax, gtserror.WithCode)
-
-	AmaxSignatureLogin(ctx context.Context, form *apimodel.AmaxSignatureLoginRequest) (*gtsmodel.User, gtserror.WithCode)
+	AmaxGetAmaxByPubKey(ctx context.Context, pubKey string) (*gtsmodel.Amax, gtserror.WithCode)
 
 	// AdminAccountAction handles the creation/execution of an action on an account.
 	AdminAccountAction(ctx context.Context, authed *oauth.Auth, form *apimodel.AdminAccountActionRequest) gtserror.WithCode

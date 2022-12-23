@@ -11,6 +11,10 @@ func (p *processor) AmaxSubmitInfo(ctx context.Context, form *apimodel.AmaxSubmi
 	return p.amaxProcessor.SubmitInfo(ctx, form)
 }
 
-func (p *processor) AmaxSignatureLogin(ctx context.Context, form *apimodel.AmaxSignatureLoginRequest) (*gtsmodel.User, gtserror.WithCode) {
-	return nil, nil
+func (p *processor) AmaxGetAmaxByPubKey(ctx context.Context, pubKey string) (*gtsmodel.Amax, gtserror.WithCode) {
+	amax, err := p.db.GetAmaxByPubKey(ctx, pubKey)
+	if err != nil {
+		return nil, gtserror.NewErrorGone(err)
+	}
+	return amax, nil
 }
