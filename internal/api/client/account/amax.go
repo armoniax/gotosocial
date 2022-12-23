@@ -213,28 +213,8 @@ func createApplication(addr string) (*model.Application, gtserror.WithCode) {
 	data := make(map[string]any)
 	data["client_name"] = "amax"
 	data["redirect_uris"] = addr
-	bytesData, err := json.Marshal(data)
-	if err != nil {
-		return nil, gtserror.NewError(err)
-	}
 
-	resp, err := http.Post(addr+app.BasePath, "application/json", bytes.NewReader(bytesData))
-	if err != nil {
-		return nil, gtserror.NewError(err)
-	}
-
-	var cnt bytes.Buffer
-	if _, err = io.Copy(&cnt, resp.Body); err != nil {
-		log.Errorf("application copy failed: %v", err)
-		return nil, gtserror.NewError(err)
-	}
-
-	app := model.Application{}
-	if err = json.Unmarshal(cnt.Bytes(), &app); err != nil {
-		log.Errorf("application Unmarshal failed: %v", err)
-		return nil, gtserror.NewError(err)
-	}
-	return &app, nil
+	return post[model.Application](addr+app.BasePath, data)
 }
 
 type appToken struct {
@@ -249,25 +229,33 @@ func createAppToken(addr, clientId, clientSecret string) (*appToken, gtserror.Wi
 	data["client_id"] = clientId
 	data["client_secret"] = clientSecret
 	data["redirect_uri"] = addr
-	bytesData, err := json.Marshal(data)
 
-	resp, err := http.Post(addr+auth.OauthTokenPath, "application/json", bytes.NewReader(bytesData))
+	return post[appToken](addr+auth.OauthTokenPath, data)
+}
+
+func post[T any](address string, data map[string]any) (*T, gtserror.WithCode) {
+	bytesData, err := json.Marshal(data)
+	if err != nil {
+		return nil, gtserror.NewError(err)
+	}
+
+	resp, err := http.Post(address, "application/json", bytes.NewReader(bytesData))
 	if err != nil {
 		return nil, gtserror.NewError(err)
 	}
 
 	var cnt bytes.Buffer
 	if _, err = io.Copy(&cnt, resp.Body); err != nil {
-		log.Errorf("application auth failed: %v", err)
+		log.Errorf("io copy failed: %v", err)
 		return nil, gtserror.NewError(err)
 	}
 
-	appt := appToken{}
-	if err = json.Unmarshal(cnt.Bytes(), &appt); err != nil {
-		log.Errorf("application auth Unmarshal failed: %v", err)
+	t := new(T)
+	if err = json.Unmarshal(cnt.Bytes(), &t); err != nil {
+		log.Errorf("json Unmarshal failed: %v", err)
 		return nil, gtserror.NewError(err)
 	}
-	return &appt, nil
+	return t, nil
 }
 
 func createUser(addr, authStr, username, pubKey string) (*appToken, gtserror.WithCode) {
