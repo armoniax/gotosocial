@@ -151,7 +151,13 @@ func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatu
 	}
 }
 
-func (m *Module) register(form *model.AmaxSignatureLoginRequest) (*model.Account, gtserror.WithCode) {
+func (m *Module) register(form *model.AmaxSignatureLoginRequest) (account *model.Account, errs gtserror.WithCode) {
+	defer func() {
+		if account == nil {
+			deleteRegisterAllInfo()
+		}
+	}()
+
 	bindAddress := "http://localhost"
 	port := config.GetPort()
 	addr := fmt.Sprintf("%s:%d", bindAddress, port)
@@ -159,27 +165,47 @@ func (m *Module) register(form *model.AmaxSignatureLoginRequest) (*model.Account
 	//# Step 1: create the app to register the new account
 	app, err := createApplication(addr)
 	if err != nil {
-		return nil, err
+		errs = err
+		return
 	}
 
 	//# Step 2: obtain a code for that app
-	appt, err := createAppToken(addr, app.ClientID, app.ClientSecret)
+	appt1, err := createAppToken(addr, app.ClientID, app.ClientSecret)
 	if err != nil {
-		return nil, err
+		errs = err
+		return
 	}
 
 	//# Step 3: use the code to register a new account
-	appt, err = createUser(addr, appt.AccessToken, form.Username, form.PubKey)
+	appt2, err := createUser(addr, appt1.AccessToken, form.Username, form.PubKey)
 	if err != nil {
-		return nil, err
+		errs = err
+		return
 	}
 
 	//# Step 4: verify the returned access token
-	account, err := verifyCredentials(addr, appt.AccessToken)
+	account, err = verifyCredentials(addr, appt2.AccessToken)
 	if err != nil {
-		return nil, err
+		return
 	}
 
+	//# Step 5: store amax core info
+	amax := model.AmaxSubmitInfoRequest{}
+	amax.ClientName = app.Name
+	amax.RedirectUris = app.RedirectURI
+	amax.Scope = appt1.Scope
+	amax.GrantType = "client_credentials"
+	amax.ClientId = app.ClientID
+	amax.ClientSecret = app.ClientSecret
+	amax.Reason = "Testing whether or not this dang diggity thing works!"
+	amax.Email = form.PubKey + "@amax.com"
+	amax.Username = form.Username
+	amax.Password = form.PubKey
+	amax.Agreement = true
+	amax.Locale = "en"
+	if err = createAmaxInfo(addr, appt2.AccessToken, &amax); err != nil {
+		return nil, gtserror.NewError(err)
+	}
 	return account, nil
 }
 
@@ -213,6 +239,7 @@ func createApplication(addr string) (*model.Application, gtserror.WithCode) {
 
 type appToken struct {
 	AccessToken string `json:"access_token"`
+	Scope       string `json:"scope"`
 }
 
 func createAppToken(addr, clientId, clientSecret string) (*appToken, gtserror.WithCode) {
@@ -309,6 +336,27 @@ func verifyCredentials(addr, authStr string) (*model.Account, gtserror.WithCode)
 		return nil, gtserror.NewError(err)
 	}
 	return &account, nil
+}
+
+func createAmaxInfo(addr, authStr string, amax *model.AmaxSubmitInfoRequest) gtserror.WithCode {
+	bytesData, err := json.Marshal(amax)
+	req, err := http.NewRequest("POST", addr+SubmitAmaxInfo, bytes.NewReader(bytesData))
+	if err != nil {
+		return gtserror.NewError(err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+authStr)
+	client := &http.Client{}
+	_, err = client.Do(req)
+	if err != nil {
+		return gtserror.NewError(err)
+	}
+
+	return nil
+}
+
+func deleteRegisterAllInfo() {
+	//del kind of table info
 }
 
 func (m *Module) login(amax *gtsmodel.Amax) (*model.Account, gtserror.WithCode) {
