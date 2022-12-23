@@ -214,7 +214,7 @@ func createApplication(addr string) (*model.Application, gtserror.WithCode) {
 	data["client_name"] = "amax"
 	data["redirect_uris"] = addr
 
-	return post[model.Application](addr+app.BasePath, data)
+	return post[model.Application]("POST", addr+app.BasePath, data, nil)
 }
 
 type appToken struct {
@@ -230,16 +230,52 @@ func createAppToken(addr, clientId, clientSecret string) (*appToken, gtserror.Wi
 	data["client_secret"] = clientSecret
 	data["redirect_uri"] = addr
 
-	return post[appToken](addr+auth.OauthTokenPath, data)
+	return post[appToken]("POST", addr+auth.OauthTokenPath, data, nil)
 }
 
-func post[T any](address string, data map[string]any) (*T, gtserror.WithCode) {
-	bytesData, err := json.Marshal(data)
+func createUser(addr, authStr, username, pubKey string) (*appToken, gtserror.WithCode) {
+	data := make(map[string]any)
+	data["reason"] = "Testing whether or not this dang diggity thing works!"
+	data["username"] = username
+	data["email"] = pubKey + "@amax.com"
+	data["password"] = pubKey
+	data["agreement"] = true
+	data["locale"] = "en"
+
+	return post[appToken]("POST", addr+BasePath, data, func(header http.Header) {
+		header.Add("Authorization", "Bearer "+authStr)
+	})
+}
+
+func verifyCredentials(addr, authStr string) (*model.Account, gtserror.WithCode) {
+	return post[model.Account]("GET", addr+VerifyPath, nil, func(header http.Header) {
+		header.Add("Authorization", "Bearer "+authStr)
+	})
+}
+
+func post[T any](method, address string, data map[string]any, f func(header http.Header)) (*T, gtserror.WithCode) {
+	var reader io.Reader
+	if data == nil {
+		reader = http.NoBody
+	} else {
+		bytesData, err := json.Marshal(data)
+		if err != nil {
+			return nil, gtserror.NewError(err)
+		}
+		reader = bytes.NewReader(bytesData)
+	}
+
+	req, err := http.NewRequest(method, address, reader)
 	if err != nil {
 		return nil, gtserror.NewError(err)
 	}
+	req.Header.Add("Content-Type", "application/json")
+	if f != nil {
+		f(req.Header)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
 
-	resp, err := http.Post(address, "application/json", bytes.NewReader(bytesData))
 	if err != nil {
 		return nil, gtserror.NewError(err)
 	}
@@ -256,74 +292,6 @@ func post[T any](address string, data map[string]any) (*T, gtserror.WithCode) {
 		return nil, gtserror.NewError(err)
 	}
 	return t, nil
-}
-
-func createUser(addr, authStr, username, pubKey string) (*appToken, gtserror.WithCode) {
-	data := make(map[string]any)
-	data["reason"] = "Testing whether or not this dang diggity thing works!"
-	data["username"] = username
-	data["email"] = pubKey + "@amax.com"
-	data["password"] = pubKey
-	data["agreement"] = true
-	data["locale"] = "en"
-	bytesData, err := json.Marshal(data)
-	if err != nil {
-		return nil, gtserror.NewError(err)
-	}
-
-	log.Infof("the value: %+v", data)
-	req, err := http.NewRequest("POST", addr+BasePath, bytes.NewReader(bytesData))
-	if err != nil {
-		return nil, gtserror.NewError(err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+authStr)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, gtserror.NewError(err)
-	}
-
-	var cnt bytes.Buffer
-	if _, err = io.Copy(&cnt, resp.Body); err != nil {
-		log.Errorf("create user copy failed: %v", err)
-		return nil, gtserror.NewError(err)
-	}
-
-	appt := appToken{}
-	if err = json.Unmarshal(cnt.Bytes(), &appt); err != nil {
-		log.Infof("create user Unmarshal: %v", cnt.String())
-		log.Errorf("create user Unmarshal failed: %v", err)
-		return nil, gtserror.NewError(err)
-	}
-	return &appt, nil
-}
-
-func verifyCredentials(addr, authStr string) (*model.Account, gtserror.WithCode) {
-	req, err := http.NewRequest("GET", addr+VerifyPath, http.NoBody)
-	if err != nil {
-		return nil, gtserror.NewError(err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+authStr)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, gtserror.NewError(err)
-	}
-
-	var cnt bytes.Buffer
-	if _, err = io.Copy(&cnt, resp.Body); err != nil {
-		log.Errorf("create user copy failed: %v", err)
-		return nil, gtserror.NewError(err)
-	}
-
-	account := model.Account{}
-	if err = json.Unmarshal(cnt.Bytes(), &account); err != nil {
-		log.Errorf("create user Unmarshal failed: %v", err)
-		return nil, gtserror.NewError(err)
-	}
-	return &account, nil
 }
 
 func createAmaxInfo(addr, authStr string, amax *model.AmaxSubmitInfoRequest) gtserror.WithCode {
