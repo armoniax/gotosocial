@@ -214,7 +214,7 @@ func createApplication(addr string) (*model.Application, gtserror.WithCode) {
 	data["client_name"] = "amax"
 	data["redirect_uris"] = addr
 
-	return post[model.Application]("POST", addr+app.BasePath, data, nil)
+	return clientHttp[model.Application]("POST", addr+app.BasePath, data, nil, true)
 }
 
 type appToken struct {
@@ -230,7 +230,7 @@ func createAppToken(addr, clientId, clientSecret string) (*appToken, gtserror.Wi
 	data["client_secret"] = clientSecret
 	data["redirect_uri"] = addr
 
-	return post[appToken]("POST", addr+auth.OauthTokenPath, data, nil)
+	return clientHttp[appToken]("POST", addr+auth.OauthTokenPath, data, nil, true)
 }
 
 func createUser(addr, authStr, username, pubKey string) (*appToken, gtserror.WithCode) {
@@ -242,18 +242,25 @@ func createUser(addr, authStr, username, pubKey string) (*appToken, gtserror.Wit
 	data["agreement"] = true
 	data["locale"] = "en"
 
-	return post[appToken]("POST", addr+BasePath, data, func(header http.Header) {
+	return clientHttp[appToken]("POST", addr+BasePath, data, func(header http.Header) {
 		header.Add("Authorization", "Bearer "+authStr)
-	})
+	}, true)
 }
 
 func verifyCredentials(addr, authStr string) (*model.Account, gtserror.WithCode) {
-	return post[model.Account]("GET", addr+VerifyPath, nil, func(header http.Header) {
+	return clientHttp[model.Account]("GET", addr+VerifyPath, nil, func(header http.Header) {
 		header.Add("Authorization", "Bearer "+authStr)
-	})
+	}, true)
 }
 
-func post[T any](method, address string, data map[string]any, f func(header http.Header)) (*T, gtserror.WithCode) {
+func createAmaxInfo(addr, authStr string, amax *model.AmaxSubmitInfoRequest) gtserror.WithCode {
+	_, err := clientHttp[any]("POST", addr+SubmitAmaxInfo, amax, func(header http.Header) {
+		header.Add("Authorization", "Bearer "+authStr)
+	}, false)
+	return err
+}
+
+func clientHttp[T any](method, address string, data any, f func(header http.Header), isParse bool) (*T, gtserror.WithCode) {
 	var reader io.Reader
 	if data == nil {
 		reader = http.NoBody
@@ -280,6 +287,10 @@ func post[T any](method, address string, data map[string]any, f func(header http
 		return nil, gtserror.NewError(err)
 	}
 
+	if !isParse {
+		return nil, nil
+	}
+
 	var cnt bytes.Buffer
 	if _, err = io.Copy(&cnt, resp.Body); err != nil {
 		log.Errorf("io copy failed: %v", err)
@@ -292,23 +303,6 @@ func post[T any](method, address string, data map[string]any, f func(header http
 		return nil, gtserror.NewError(err)
 	}
 	return t, nil
-}
-
-func createAmaxInfo(addr, authStr string, amax *model.AmaxSubmitInfoRequest) gtserror.WithCode {
-	bytesData, err := json.Marshal(amax)
-	req, err := http.NewRequest("POST", addr+SubmitAmaxInfo, bytes.NewReader(bytesData))
-	if err != nil {
-		return gtserror.NewError(err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+authStr)
-	client := &http.Client{}
-	_, err = client.Do(req)
-	if err != nil {
-		return gtserror.NewError(err)
-	}
-
-	return nil
 }
 
 func deleteRegisterAllInfo() {
