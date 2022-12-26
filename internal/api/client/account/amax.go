@@ -149,7 +149,7 @@ func validateSignatureLoginReq(form *model.AmaxSignatureLoginRequest) error {
 	return nil
 }
 
-func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatureLoginRequest) (*model.Account, gtserror.WithCode) {
+func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatureLoginRequest) (*token, gtserror.WithCode) {
 	if len(form.PubKey) == 0 {
 		return nil, gtserror.NewError(errors.New("form PubKey is empty"))
 	}
@@ -171,13 +171,7 @@ func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatu
 	}
 }
 
-func (m *Module) register(addr string, form *model.AmaxSignatureLoginRequest) (account *model.Account, errs gtserror.WithCode) {
-	defer func() {
-		if account == nil {
-			deleteRegisterAllInfo()
-		}
-	}()
-
+func (m *Module) register(addr string, form *model.AmaxSignatureLoginRequest) (token *token, errs gtserror.WithCode) {
 	//# Step 1: create the app to register the new account
 	app, err := createApplication(addr)
 	if err != nil {
@@ -193,15 +187,9 @@ func (m *Module) register(addr string, form *model.AmaxSignatureLoginRequest) (a
 	}
 
 	//# Step 3: use the code to register a new account
-	appt2, err := createUser(addr, appt1.AccessToken, form.Username, form.PubKey)
+	appt2, err := createUserOrToken(addr+BasePath, appt1.AccessToken, form.Username, form.PubKey)
 	if err != nil {
 		errs = err
-		return
-	}
-
-	//# Step 4: verify the returned access token
-	account, err = verifyCredentials(addr, appt2.AccessToken)
-	if err != nil {
 		return
 	}
 
@@ -222,7 +210,7 @@ func (m *Module) register(addr string, form *model.AmaxSignatureLoginRequest) (a
 	if err = createAmaxInfo(addr, appt2.AccessToken, &amax); err != nil {
 		return nil, gtserror.NewError(err)
 	}
-	return account, nil
+	return appt2, nil
 }
 
 func createApplication(addr string) (*model.Application, gtserror.WithCode) {
@@ -233,12 +221,14 @@ func createApplication(addr string) (*model.Application, gtserror.WithCode) {
 	return clientHttp[model.Application]("POST", addr+app.BasePath, data, nil, true)
 }
 
-type appToken struct {
+type token struct {
 	AccessToken string `json:"access_token"`
 	Scope       string `json:"scope"`
+	TokenType   string `json:"token_type"`
+	CreatedAt   int64  `json:"created_at"`
 }
 
-func createAppToken(addr, clientId, clientSecret string) (*appToken, gtserror.WithCode) {
+func createAppToken(addr, clientId, clientSecret string) (*token, gtserror.WithCode) {
 	data := make(map[string]any)
 	data["scope"] = "read"
 	data["grant_type"] = "client_credentials"
@@ -246,10 +236,10 @@ func createAppToken(addr, clientId, clientSecret string) (*appToken, gtserror.Wi
 	data["client_secret"] = clientSecret
 	data["redirect_uri"] = addr
 
-	return clientHttp[appToken]("POST", addr+auth.OauthTokenPath, data, nil, true)
+	return clientHttp[token]("POST", addr+auth.OauthTokenPath, data, nil, true)
 }
 
-func createUser(addr, authStr, username, pubKey string) (*appToken, gtserror.WithCode) {
+func createUserOrToken(path, authStr, username, pubKey string) (*token, gtserror.WithCode) {
 	data := make(map[string]any)
 	data["reason"] = "Testing whether or not this dang diggity thing works!"
 	data["username"] = username
@@ -258,7 +248,7 @@ func createUser(addr, authStr, username, pubKey string) (*appToken, gtserror.Wit
 	data["agreement"] = true
 	data["locale"] = "en"
 
-	return clientHttp[appToken]("POST", addr+BasePath, data, func(header http.Header) {
+	return clientHttp[token]("POST", path, data, func(header http.Header) {
 		header.Add("Authorization", "Bearer "+authStr)
 	}, true)
 }
@@ -277,10 +267,8 @@ func createAmaxInfo(addr, authStr string, amax *model.AmaxSubmitInfoRequest) gts
 }
 
 func clientHttp[T any](method, address string, data any, f func(header http.Header), isParse bool) (*T, gtserror.WithCode) {
-	var reader io.Reader
-	if data == nil {
-		reader = http.NoBody
-	} else {
+	var reader io.Reader = http.NoBody
+	if data != nil {
 		bytesData, err := json.Marshal(data)
 		if err != nil {
 			return nil, gtserror.NewError(err)
@@ -321,11 +309,7 @@ func clientHttp[T any](method, address string, data any, f func(header http.Head
 	return t, nil
 }
 
-func deleteRegisterAllInfo() {
-	//del kind of table info
-}
-
-func (m *Module) login(addr string, amax *gtsmodel.Amax) (*model.Account, gtserror.WithCode) {
+func (m *Module) login(addr string, amax *gtsmodel.Amax) (*token, gtserror.WithCode) {
 	//# Step 2: obtain a code for that app
 	appt1, err := createAppToken(addr, amax.ClientId, amax.ClientSecret)
 	if err != nil {
@@ -333,30 +317,10 @@ func (m *Module) login(addr string, amax *gtsmodel.Amax) (*model.Account, gtserr
 	}
 
 	//# Step 3: use the code to register a new account
-	appt2, err := createUserToken(addr, appt1.AccessToken, amax.Username, amax.PubKey)
+	appt2, err := createUserOrToken(addr+GenUserToken, appt1.AccessToken, amax.Username, amax.PubKey)
 	if err != nil {
 		return nil, err
 	}
 
-	//# Step 4: verify the returned access token
-	account, err := verifyCredentials(addr, appt2.AccessToken)
-	if err != nil {
-		return nil, err
-	}
-
-	return account, nil
-}
-
-func createUserToken(addr, authStr, username, pubKey string) (*appToken, gtserror.WithCode) {
-	data := make(map[string]any)
-	data["reason"] = "Testing whether or not this dang diggity thing works!"
-	data["username"] = username
-	data["email"] = pubKey + "@amax.com"
-	data["password"] = pubKey
-	data["agreement"] = true
-	data["locale"] = "en"
-
-	return clientHttp[appToken]("POST", addr+GenUserToken, data, func(header http.Header) {
-		header.Add("Authorization", "Bearer "+authStr)
-	}, true)
+	return appt2, nil
 }
