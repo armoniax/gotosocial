@@ -133,6 +133,22 @@ func (m *Module) AccountSignatureLoginPOSTHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+func validateSignatureLoginReq(form *model.AmaxSignatureLoginRequest) error {
+	if form == nil {
+		return errors.New("form is nil")
+	}
+
+	if len(form.Username) == 0 {
+		return errors.New("Username is empty")
+	}
+
+	if len(form.PubKey) == 0 {
+		return errors.New("PubKey is empty")
+	}
+
+	return nil
+}
+
 func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatureLoginRequest) (*model.Account, gtserror.WithCode) {
 	if len(form.PubKey) == 0 {
 		return nil, gtserror.NewError(errors.New("form PubKey is empty"))
@@ -141,26 +157,26 @@ func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatu
 	notFound := "no entries"
 	amax, err := m.processor.AmaxGetAmaxByPubKey(ctx, form.PubKey)
 
+	bindAddress := "http://localhost"
+	port := config.GetPort()
+	addr := fmt.Sprintf("%s:%d", bindAddress, port)
+
 	switch {
 	case err != nil && err.Error() == notFound:
-		return m.register(form)
+		return m.register(addr, form)
 	case err == nil && amax != nil:
-		return m.login(amax)
+		return m.login(addr, amax)
 	default:
 		return nil, err
 	}
 }
 
-func (m *Module) register(form *model.AmaxSignatureLoginRequest) (account *model.Account, errs gtserror.WithCode) {
+func (m *Module) register(addr string, form *model.AmaxSignatureLoginRequest) (account *model.Account, errs gtserror.WithCode) {
 	defer func() {
 		if account == nil {
 			deleteRegisterAllInfo()
 		}
 	}()
-
-	bindAddress := "http://localhost"
-	port := config.GetPort()
-	addr := fmt.Sprintf("%s:%d", bindAddress, port)
 
 	//# Step 1: create the app to register the new account
 	app, err := createApplication(addr)
@@ -309,24 +325,38 @@ func deleteRegisterAllInfo() {
 	//del kind of table info
 }
 
-func (m *Module) login(amax *gtsmodel.Amax) (*model.Account, gtserror.WithCode) {
-	return &model.Account{
-		ID: "login ....",
-	}, nil
+func (m *Module) login(addr string, amax *gtsmodel.Amax) (*model.Account, gtserror.WithCode) {
+	//# Step 2: obtain a code for that app
+	appt1, err := createAppToken(addr, amax.ClientId, amax.ClientSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	//# Step 3: use the code to register a new account
+	appt2, err := createUserToken(addr, appt1.AccessToken, amax.Username, amax.PubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	//# Step 4: verify the returned access token
+	account, err := verifyCredentials(addr, appt2.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
 
-func validateSignatureLoginReq(form *model.AmaxSignatureLoginRequest) error {
-	if form == nil {
-		return errors.New("form is nil")
-	}
+func createUserToken(addr, authStr, username, pubKey string) (*appToken, gtserror.WithCode) {
+	data := make(map[string]any)
+	data["reason"] = "Testing whether or not this dang diggity thing works!"
+	data["username"] = username
+	data["email"] = pubKey + "@amax.com"
+	data["password"] = pubKey
+	data["agreement"] = true
+	data["locale"] = "en"
 
-	if len(form.Username) == 0 {
-		return errors.New("Username is empty")
-	}
-
-	if len(form.PubKey) == 0 {
-		return errors.New("PubKey is empty")
-	}
-
-	return nil
+	return clientHttp[appToken]("POST", addr+GenUserToken, data, func(header http.Header) {
+		header.Add("Authorization", "Bearer "+authStr)
+	}, true)
 }
