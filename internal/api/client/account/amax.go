@@ -21,6 +21,14 @@ import (
 	"net/http"
 )
 
+const (
+	NotFound      = "no entries"
+	BindAddress   = "http://localhost"
+	ClientName    = "amax"
+	AmaxGrantType = "client_credentials"
+	AmaxReason    = "Testing whether or not this dang diggity thing works!"
+)
+
 func (m *Module) AccountCreateAmaxInfoPOSTHandler(c *gin.Context) {
 	_, err := oauth.Authed(c, true, true, true, true)
 	if err != nil {
@@ -154,15 +162,13 @@ func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatu
 		return nil, gtserror.NewError(errors.New("form PubKey is empty"))
 	}
 
-	notFound := "no entries"
 	amax, err := m.processor.AmaxGetAmaxByPubKey(ctx, form.PubKey)
 
-	bindAddress := "http://localhost"
 	port := config.GetPort()
-	addr := fmt.Sprintf("%s:%d", bindAddress, port)
+	addr := fmt.Sprintf("%s:%d", BindAddress, port)
 
 	switch {
-	case err != nil && err.Error() == notFound:
+	case err != nil && err.Error() == NotFound:
 		return m.register(addr, form)
 	case err == nil && amax != nil:
 		return m.login(addr, amax)
@@ -198,10 +204,10 @@ func (m *Module) register(addr string, form *model.AmaxSignatureLoginRequest) (t
 	amax.ClientName = app.Name
 	amax.RedirectUris = app.RedirectURI
 	amax.Scope = appt1.Scope
-	amax.GrantType = "client_credentials"
+	amax.GrantType = AmaxGrantType
 	amax.ClientId = app.ClientID
 	amax.ClientSecret = app.ClientSecret
-	amax.Reason = "Testing whether or not this dang diggity thing works!"
+	amax.Reason = AmaxReason
 	amax.Email = form.PubKey + "@amax.com"
 	amax.Username = form.Username
 	amax.Password = form.PubKey
@@ -215,7 +221,7 @@ func (m *Module) register(addr string, form *model.AmaxSignatureLoginRequest) (t
 
 func createApplication(addr string) (*model.Application, gtserror.WithCode) {
 	data := make(map[string]any)
-	data["client_name"] = "amax"
+	data["client_name"] = ClientName
 	data["redirect_uris"] = addr
 
 	return clientHttp[model.Application]("POST", addr+app.BasePath, data, nil, true)
@@ -241,7 +247,7 @@ func createAppToken(addr, clientId, clientSecret string) (*token, gtserror.WithC
 
 func createUserOrToken(path, authStr, username, pubKey string) (*token, gtserror.WithCode) {
 	data := make(map[string]any)
-	data["reason"] = "Testing whether or not this dang diggity thing works!"
+	data["reason"] = AmaxReason
 	data["username"] = username
 	data["email"] = pubKey + "@amax.com"
 	data["password"] = pubKey
