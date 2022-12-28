@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/h2non/filetype"
 	"github.com/superseriousbusiness/gotosocial/internal/log"
@@ -38,6 +37,7 @@ func AllSupportedMIMETypes() []string {
 		mimeImageGif,
 		mimeImagePng,
 		mimeImageWebp,
+		mimeVideoMp4,
 	}
 }
 
@@ -62,16 +62,10 @@ func parseContentType(fileHeader []byte) (string, error) {
 	return kind.MIME.Value, nil
 }
 
-// supportedImage checks mime type of an image against a slice of accepted types,
-// and returns True if the mime type is accepted.
-func supportedImage(mimeType string) bool {
-	acceptedImageTypes := []string{
-		mimeImageJpeg,
-		mimeImageGif,
-		mimeImagePng,
-		mimeImageWebp,
-	}
-	for _, accepted := range acceptedImageTypes {
+// supportedAttachment checks mime type of an attachment against a
+// slice of accepted types, and returns True if the mime type is accepted.
+func supportedAttachment(mimeType string) bool {
+	for _, accepted := range AllSupportedMIMETypes() {
 		if mimeType == accepted {
 			return true
 		}
@@ -132,22 +126,6 @@ func (l *logrusWrapper) Info(msg string, keysAndValues ...interface{}) {
 // Error logs an error condition.
 func (l *logrusWrapper) Error(err error, msg string, keysAndValues ...interface{}) {
 	log.Error("media manager cron logger: ", err, msg, keysAndValues)
-}
-
-func parseOlderThan(olderThanDays int) (time.Time, error) {
-	// convert days into a duration string
-	olderThanHoursString := fmt.Sprintf("%dh", olderThanDays*24)
-
-	// parse the duration string into a duration
-	olderThanHours, err := time.ParseDuration(olderThanHoursString)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	// 'subtract' that from the time now to give our threshold
-	olderThan := time.Now().Add(-olderThanHours)
-
-	return olderThan, nil
 }
 
 // lengthReader wraps a reader and reads the length of total bytes written as it goes.

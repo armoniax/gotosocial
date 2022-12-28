@@ -19,9 +19,9 @@
 package cache
 
 import (
-	"time"
-
 	"codeberg.org/gruf/go-cache/v3/result"
+	"github.com/superseriousbusiness/gotosocial/internal/cache/domain"
+	"github.com/superseriousbusiness/gotosocial/internal/config"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
 )
 
@@ -45,8 +45,8 @@ type GTSCaches interface {
 	// Block provides access to the gtsmodel Block (account) database cache.
 	Block() *result.Cache[*gtsmodel.Block]
 
-	// DomainBlock provides access to the gtsmodel DomainBlock database cache.
-	DomainBlock() *result.Cache[*gtsmodel.DomainBlock]
+	// DomainBlock provides access to the domain block database cache.
+	DomainBlock() *domain.BlockCache
 
 	// Emoji provides access to the gtsmodel Emoji database cache.
 	Emoji() *result.Cache[*gtsmodel.Emoji]
@@ -79,7 +79,7 @@ type gtsCaches struct {
 	amax          *result.Cache[*gtsmodel.Amax]
 	account       *result.Cache[*gtsmodel.Account]
 	block         *result.Cache[*gtsmodel.Block]
-	domainBlock   *result.Cache[*gtsmodel.DomainBlock]
+	domainBlock   *domain.BlockCache
 	emoji         *result.Cache[*gtsmodel.Emoji]
 	emojiCategory *result.Cache[*gtsmodel.EmojiCategory]
 	mention       *result.Cache[*gtsmodel.Mention]
@@ -105,37 +105,37 @@ func (c *gtsCaches) Init() {
 
 func (c *gtsCaches) Start() {
 	tryUntil("starting gtsmodel.Amax cache", 5, func() bool {
-		return c.amax.Start(time.Second * 10)
+		return c.amax.Start(config.GetCacheGTSAccountSweepFreq())
 	})
 	tryUntil("starting gtsmodel.Account cache", 5, func() bool {
-		return c.account.Start(time.Second * 10)
+		return c.account.Start(config.GetCacheGTSAccountSweepFreq())
 	})
 	tryUntil("starting gtsmodel.Block cache", 5, func() bool {
-		return c.block.Start(time.Second * 10)
+		return c.block.Start(config.GetCacheGTSBlockSweepFreq())
 	})
 	tryUntil("starting gtsmodel.DomainBlock cache", 5, func() bool {
-		return c.domainBlock.Start(time.Second * 10)
+		return c.domainBlock.Start(config.GetCacheGTSDomainBlockSweepFreq())
 	})
 	tryUntil("starting gtsmodel.Emoji cache", 5, func() bool {
-		return c.emoji.Start(time.Second * 10)
+		return c.emoji.Start(config.GetCacheGTSEmojiSweepFreq())
 	})
 	tryUntil("starting gtsmodel.EmojiCategory cache", 5, func() bool {
-		return c.emojiCategory.Start(time.Second * 10)
+		return c.emojiCategory.Start(config.GetCacheGTSEmojiCategorySweepFreq())
 	})
 	tryUntil("starting gtsmodel.Mention cache", 5, func() bool {
-		return c.mention.Start(time.Second * 10)
+		return c.mention.Start(config.GetCacheGTSMentionSweepFreq())
 	})
 	tryUntil("starting gtsmodel.Notification cache", 5, func() bool {
-		return c.notification.Start(time.Second * 10)
+		return c.notification.Start(config.GetCacheGTSNotificationSweepFreq())
 	})
 	tryUntil("starting gtsmodel.Status cache", 5, func() bool {
-		return c.status.Start(time.Second * 10)
+		return c.status.Start(config.GetCacheGTSStatusSweepFreq())
 	})
 	tryUntil("starting gtsmodel.Tombstone cache", 5, func() bool {
-		return c.tombstone.Start(time.Second * 10)
+		return c.tombstone.Start(config.GetCacheGTSTombstoneSweepFreq())
 	})
 	tryUntil("starting gtsmodel.User cache", 5, func() bool {
-		return c.user.Start(time.Second * 10)
+		return c.user.Start(config.GetCacheGTSUserSweepFreq())
 	})
 }
 
@@ -165,7 +165,7 @@ func (c *gtsCaches) Block() *result.Cache[*gtsmodel.Block] {
 	return c.block
 }
 
-func (c *gtsCaches) DomainBlock() *result.Cache[*gtsmodel.DomainBlock] {
+func (c *gtsCaches) DomainBlock() *domain.BlockCache {
 	return c.domainBlock
 }
 
@@ -198,7 +198,7 @@ func (c *gtsCaches) User() *result.Cache[*gtsmodel.User] {
 }
 
 func (c *gtsCaches) initAmax() {
-	c.amax = result.NewSized([]result.Lookup{
+	c.amax = result.New([]result.Lookup{
 		{Name: "ID"},
 		{Name: "PubKey"},
 	}, func(a1 *gtsmodel.Amax) *gtsmodel.Amax {
@@ -206,11 +206,11 @@ func (c *gtsCaches) initAmax() {
 		*a2 = *a1
 		return a2
 	}, 1000)
-	c.amax.SetTTL(time.Minute*5, false)
+	c.amax.SetTTL(config.GetCacheGTSAccountTTL(), true)
 }
 
 func (c *gtsCaches) initAccount() {
-	c.account = result.NewSized([]result.Lookup{
+	c.account = result.New([]result.Lookup{
 		{Name: "ID"},
 		{Name: "URI"},
 		{Name: "URL"},
@@ -220,12 +220,12 @@ func (c *gtsCaches) initAccount() {
 		a2 := new(gtsmodel.Account)
 		*a2 = *a1
 		return a2
-	}, 1000)
-	c.account.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSAccountMaxSize())
+	c.account.SetTTL(config.GetCacheGTSAccountTTL(), true)
 }
 
 func (c *gtsCaches) initBlock() {
-	c.block = result.NewSized([]result.Lookup{
+	c.block = result.New([]result.Lookup{
 		{Name: "ID"},
 		{Name: "AccountID.TargetAccountID"},
 		{Name: "URI"},
@@ -233,23 +233,19 @@ func (c *gtsCaches) initBlock() {
 		b2 := new(gtsmodel.Block)
 		*b2 = *b1
 		return b2
-	}, 1000)
-	c.block.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSBlockMaxSize())
+	c.block.SetTTL(config.GetCacheGTSBlockTTL(), true)
 }
 
 func (c *gtsCaches) initDomainBlock() {
-	c.domainBlock = result.NewSized([]result.Lookup{
-		{Name: "Domain"},
-	}, func(d1 *gtsmodel.DomainBlock) *gtsmodel.DomainBlock {
-		d2 := new(gtsmodel.DomainBlock)
-		*d2 = *d1
-		return d2
-	}, 1000)
-	c.domainBlock.SetTTL(time.Minute*5, false)
+	c.domainBlock = domain.New(
+		config.GetCacheGTSDomainBlockMaxSize(),
+		config.GetCacheGTSDomainBlockTTL(),
+	)
 }
 
 func (c *gtsCaches) initEmoji() {
-	c.emoji = result.NewSized([]result.Lookup{
+	c.emoji = result.New([]result.Lookup{
 		{Name: "ID"},
 		{Name: "URI"},
 		{Name: "Shortcode.Domain"},
@@ -258,46 +254,46 @@ func (c *gtsCaches) initEmoji() {
 		e2 := new(gtsmodel.Emoji)
 		*e2 = *e1
 		return e2
-	}, 1000)
-	c.emoji.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSEmojiMaxSize())
+	c.emoji.SetTTL(config.GetCacheGTSEmojiTTL(), true)
 }
 
 func (c *gtsCaches) initEmojiCategory() {
-	c.emojiCategory = result.NewSized([]result.Lookup{
+	c.emojiCategory = result.New([]result.Lookup{
 		{Name: "ID"},
 		{Name: "Name"},
 	}, func(c1 *gtsmodel.EmojiCategory) *gtsmodel.EmojiCategory {
 		c2 := new(gtsmodel.EmojiCategory)
 		*c2 = *c1
 		return c2
-	}, 1000)
-	c.emojiCategory.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSEmojiCategoryMaxSize())
+	c.emojiCategory.SetTTL(config.GetCacheGTSEmojiCategoryTTL(), true)
 }
 
 func (c *gtsCaches) initMention() {
-	c.mention = result.NewSized([]result.Lookup{
+	c.mention = result.New([]result.Lookup{
 		{Name: "ID"},
 	}, func(m1 *gtsmodel.Mention) *gtsmodel.Mention {
 		m2 := new(gtsmodel.Mention)
 		*m2 = *m1
 		return m2
-	}, 1000)
-	c.mention.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSMentionMaxSize())
+	c.mention.SetTTL(config.GetCacheGTSMentionTTL(), true)
 }
 
 func (c *gtsCaches) initNotification() {
-	c.notification = result.NewSized([]result.Lookup{
+	c.notification = result.New([]result.Lookup{
 		{Name: "ID"},
 	}, func(n1 *gtsmodel.Notification) *gtsmodel.Notification {
 		n2 := new(gtsmodel.Notification)
 		*n2 = *n1
 		return n2
-	}, 1000)
-	c.notification.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSNotificationMaxSize())
+	c.notification.SetTTL(config.GetCacheGTSNotificationTTL(), true)
 }
 
 func (c *gtsCaches) initStatus() {
-	c.status = result.NewSized([]result.Lookup{
+	c.status = result.New([]result.Lookup{
 		{Name: "ID"},
 		{Name: "URI"},
 		{Name: "URL"},
@@ -305,25 +301,25 @@ func (c *gtsCaches) initStatus() {
 		s2 := new(gtsmodel.Status)
 		*s2 = *s1
 		return s2
-	}, 1000)
-	c.status.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSStatusMaxSize())
+	c.status.SetTTL(config.GetCacheGTSStatusTTL(), true)
 }
 
 // initTombstone will initialize the gtsmodel.Tombstone cache.
 func (c *gtsCaches) initTombstone() {
-	c.tombstone = result.NewSized([]result.Lookup{
+	c.tombstone = result.New([]result.Lookup{
 		{Name: "ID"},
 		{Name: "URI"},
 	}, func(t1 *gtsmodel.Tombstone) *gtsmodel.Tombstone {
 		t2 := new(gtsmodel.Tombstone)
 		*t2 = *t1
 		return t2
-	}, 100)
-	c.tombstone.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSTombstoneMaxSize())
+	c.tombstone.SetTTL(config.GetCacheGTSTombstoneTTL(), true)
 }
 
 func (c *gtsCaches) initUser() {
-	c.user = result.NewSized([]result.Lookup{
+	c.user = result.New([]result.Lookup{
 		{Name: "UnconfirmedEmail"},
 		{Name: "ID"},
 		{Name: "AccountID"},
@@ -334,6 +330,6 @@ func (c *gtsCaches) initUser() {
 		u2 := new(gtsmodel.User)
 		*u2 = *u1
 		return u2
-	}, 1000)
-	c.user.SetTTL(time.Minute*5, false)
+	}, config.GetCacheGTSUserMaxSize())
+	c.user.SetTTL(config.GetCacheGTSUserTTL(), true)
 }

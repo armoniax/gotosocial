@@ -10,7 +10,7 @@ With GoToSocial, you can keep in touch with your friends, post, read, and share 
 
 **GoToSocial is still [ALPHA SOFTWARE](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)**. It is already deployable and useable, and it federates cleanly with many other Fediverse servers (not yet all). However, many things are not yet implemented, and there are plenty of bugs! We foresee entering beta somewhere in 2023.
 
-Documentation is at [docs.gotosocial.org](https://docs.gotosocial.org). You can skip straight to the API documentation [here](https://docs.gotosocial.org/en/latest/api/swagger/).
+Documentation is at [docs.gotosocial.org](https://docs.gotosocial.org). You can skip straight to the API documentation [here](https://docs.gotosocial.org/en/latest/api/swagger/). To build from source, check the [CONTRIBUTING.md](./CONTRIBUTING.md) file.
 
 Here's a screenshot of the instance landing page!
 
@@ -37,11 +37,12 @@ Here's a screenshot of the instance landing page!
   - [Client App Issues](#client-app-issues)
   - [Federation Issues](#federation-issues)
 - [Contributing](#contributing)
+- [Building](#building)
 - [Contact](#contact)
 - [Credits](#credits)
   - [Libraries](#libraries)
   - [Image Attribution](#image-attribution)
-  - [Developers](#developers)
+  - [Team](#team)
   - [Special Thanks](#special-thanks)
 - [Sponsorship + Funding](#sponsorship--funding)
   - [OpenCollective](#opencollective)
@@ -193,6 +194,10 @@ Since every ActivityPub server implementation has a slightly different interpret
 
 You would like to contribute to GtS? Great! ❤️❤️❤️ Check out the issues page to see if there's anything you intend to jump in on, and read the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines and setting up your dev environment.
 
+## Building
+
+Instructions for building GoToSocial from source are in the [CONTRIBUTING.md](./CONTRIBUTING.md) file.
+
 ## Contact
 
 For questions and comments, you can [join our Matrix space](https://matrix.to/#/#gotosocial-space:superseriousbusiness.org) at `#gotosocial-space:superseriousbusiness.org`. This is the quickest way to reach the devs. You can also mail [admin@gotosocial.org](mailto:admin@gotosocial.org).
@@ -205,6 +210,7 @@ For bugs and feature requests, please check to see if there's [already an issue]
 
 The following libraries and frameworks are used by GoToSocial, with gratitude 💕
 
+- [abema/go-mp4](https://github.com/abema/go-mp4); mp4 parsing. [MIT License](https://spdx.org/licenses/MIT.html).
 - [buckket/go-blurhash](https://github.com/buckket/go-blurhash); used for generating image blurhashes. [GPL-3.0 License](https://spdx.org/licenses/GPL-3.0-only.html).
 - [coreos/go-oidc](https://github.com/coreos/go-oidc); OIDC client library. [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html).
 - [disintegration/imaging](https://github.com/disintegration/imaging); image resizing. [MIT License](https://spdx.org/licenses/MIT.html).
