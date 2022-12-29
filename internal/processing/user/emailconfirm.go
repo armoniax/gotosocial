@@ -22,6 +22,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/superseriousbusiness/gotosocial/internal/log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -131,4 +133,18 @@ func (p *processor) ConfirmEmail(ctx context.Context, token string) (*gtsmodel.U
 	}
 
 	return user, nil
+}
+
+func (p *processor) ChangeEmail(ctx context.Context, user *gtsmodel.User, newEmail string) gtserror.WithCode {
+	//must validate
+	log.Warnf("the username: %v, the userID: %v ,the newEmail: %v", user.AccountID, user.ID, newEmail)
+
+	updatingColumns := []string{"email", "unconfirmed_email"}
+	user.Email = ""
+	user.UnconfirmedEmail = strings.TrimSpace(newEmail)
+
+	if err := p.db.UpdateByID(ctx, user, user.ID, updatingColumns...); err != nil {
+		return gtserror.NewErrorInternalError(err, "database error")
+	}
+	return nil
 }

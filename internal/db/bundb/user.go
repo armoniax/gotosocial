@@ -87,6 +87,24 @@ func (u *userDB) GetUserByEmailAddress(ctx context.Context, emailAddress string)
 	}, emailAddress)
 }
 
+func (u *userDB) GetUserByUnconfirmedEmail(ctx context.Context, unconfirmedEmail string) (*gtsmodel.User, db.Error) {
+	return u.state.Caches.GTS.User().Load("UnconfirmedEmail", func() (*gtsmodel.User, error) {
+		var user gtsmodel.User
+
+		q := u.conn.
+			NewSelect().
+			Model(&user).
+			Relation("Account").
+			Where("? = ?", bun.Ident("user.unconfirmed_email"), unconfirmedEmail)
+
+		if err := q.Scan(ctx); err != nil {
+			return nil, u.conn.ProcessError(err)
+		}
+
+		return &user, nil
+	}, unconfirmedEmail)
+}
+
 func (u *userDB) GetUserByExternalID(ctx context.Context, id string) (*gtsmodel.User, db.Error) {
 	return u.state.Caches.GTS.User().Load("ExternalID", func() (*gtsmodel.User, error) {
 		var user gtsmodel.User

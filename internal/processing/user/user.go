@@ -20,7 +20,6 @@ package user
 
 import (
 	"context"
-
 	"github.com/superseriousbusiness/gotosocial/internal/db"
 	"github.com/superseriousbusiness/gotosocial/internal/email"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
@@ -36,6 +35,8 @@ type Processor interface {
 	SendConfirmEmail(ctx context.Context, user *gtsmodel.User, username string) error
 	// ConfirmEmail confirms an email address using the given token.
 	ConfirmEmail(ctx context.Context, token string) (*gtsmodel.User, gtserror.WithCode)
+
+	ChangeEmail(ctx context.Context, user *gtsmodel.User, newEmail string) gtserror.WithCode
 }
 
 type processor struct {

@@ -51,6 +51,7 @@ func (p *processor) Create(ctx context.Context, applicationToken oauth2.TokenInf
 	}
 
 	reasonRequired := config.GetAccountsReasonRequired()
+
 	approvalRequired := config.GetAccountsApprovalRequired()
 
 	// don't store a reason if we don't require one
@@ -63,6 +64,43 @@ func (p *processor) Create(ctx context.Context, applicationToken oauth2.TokenInf
 	user, err := p.db.NewSignup(ctx, form.Username, text.SanitizePlaintext(reason), approvalRequired, form.Email, form.Password, form.IP, form.Locale, application.ID, false, "", false)
 	if err != nil {
 		return nil, gtserror.NewErrorInternalError(fmt.Errorf("error creating new signup in the database: %s", err))
+	}
+
+	log.Tracef("generating a token for user %s with account %s and application %s", user.ID, user.AccountID, application.ID)
+	accessToken, err := p.oauthServer.GenerateUserAccessToken(ctx, applicationToken, application.ClientSecret, user.ID)
+	if err != nil {
+		return nil, gtserror.NewErrorInternalError(fmt.Errorf("error creating new access token for user %s: %s", user.ID, err))
+	}
+
+	if user.Account == nil {
+		a, err := p.db.GetAccountByID(ctx, user.AccountID)
+		if err != nil {
+			return nil, gtserror.NewErrorInternalError(fmt.Errorf("error getting new account from the database: %s", err))
+		}
+		user.Account = a
+	}
+
+	// there are side effects for creating a new account (sending confirmation emails etc)
+	// so pass a message to the processor so that it can do it asynchronously
+	p.clientWorker.Queue(messages.FromClientAPI{
+		APObjectType:   ap.ObjectProfile,
+		APActivityType: ap.ActivityCreate,
+		GTSModel:       user.Account,
+		OriginAccount:  user.Account,
+	})
+
+	return &apimodel.Token{
+		AccessToken: accessToken.GetAccess(),
+		TokenType:   "Bearer",
+		Scope:       accessToken.GetScope(),
+		CreatedAt:   accessToken.GetAccessCreateAt().Unix(),
+	}, nil
+}
+
+func (p *processor) CreateUserToken(ctx context.Context, applicationToken oauth2.TokenInfo, application *gtsmodel.Application, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode) {
+	user, err := p.db.GetUserByUnconfirmedEmail(ctx, form.Email)
+	if err != nil {
+		return nil, gtserror.NewErrorInternalError(fmt.Errorf("error create user token GetUserByUnconfirmedEmail: %s", err))
 	}
 
 	log.Tracef("generating a token for user %s with account %s and application %s", user.ID, user.AccountID, application.ID)

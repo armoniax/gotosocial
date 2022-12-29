@@ -174,3 +174,15 @@ func NewErrorGone(original error, helpText ...string) WithCode {
 		code:     http.StatusGone,
 	}
 }
+
+func NewError(original error, helpText ...string) WithCode {
+	safe := original.Error()
+	if helpText != nil {
+		safe = safe + ": " + strings.Join(helpText, ": ")
+	}
+	return withCode{
+		original: original,
+		safe:     errors.New(safe),
+		code:     http.StatusGone,
+	}
+}

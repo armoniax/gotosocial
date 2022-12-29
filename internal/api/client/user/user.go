@@ -31,6 +31,7 @@ const (
 	BasePath = "/api/v1/user"
 	// PasswordChangePath is the path for POSTing a password change request.
 	PasswordChangePath = BasePath + "/password_change"
+	EmailChangePath    = BasePath + "/email_change"
 )
 
 // Module implements the ClientAPIModule interface
@@ -48,5 +49,7 @@ func New(processor processing.Processor) api.ClientModule {
 // Route attaches all routes from this module to the given router
 func (m *Module) Route(r router.Router) error {
 	r.AttachHandler(http.MethodPost, PasswordChangePath, m.PasswordChangePOSTHandler)
+
+	r.AttachHandler(http.MethodPost, EmailChangePath, m.EmailChangePOSTHandler)
 	return nil
 }

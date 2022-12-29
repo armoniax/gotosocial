@@ -40,6 +40,7 @@ import (
 
 // Processor wraps a bunch of functions for processing account actions.
 type Processor interface {
+	CreateUserToken(ctx context.Context, applicationToken oauth2.TokenInfo, application *gtsmodel.Application, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode)
 	// Create processes the given form for creating a new account, returning an oauth token for that account if successful.
 	Create(ctx context.Context, applicationToken oauth2.TokenInfo, application *gtsmodel.Application, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode)
 	// Delete deletes an account, and all of that account's statuses, media, follows, notifications, etc etc etc.

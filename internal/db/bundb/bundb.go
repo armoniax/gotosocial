@@ -73,6 +73,7 @@ var registerTables = []interface{}{
 
 // DBService satisfies the DB interface
 type DBService struct {
+	db.Amax
 	db.Account
 	db.Admin
 	db.Basic
@@ -160,6 +161,10 @@ func NewBunDBService(ctx context.Context, state *state.State) (db.DB, error) {
 	}
 
 	ps := &DBService{
+		Amax: &amaxDB{
+			conn:  conn,
+			state: state,
+		},
 		Account: &accountDB{
 			conn:  conn,
 			state: state,

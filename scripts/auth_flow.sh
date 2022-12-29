@@ -7,8 +7,9 @@ REDIRECT_URI="${SERVER_URL}"
 CLIENT_NAME="Test Application Name"
 REGISTRATION_REASON="Testing whether or not this dang diggity thing works!"
 REGISTRATION_USERNAME="${1}"
-REGISTRATION_EMAIL="${2}"
-REGISTRATION_PASSWORD="very safe password 123"
+#REGISTRATION_EMAIL="${2}"
+REGISTRATION_PASSWORD=${2}
+REGISTRATION_EMAIL=${REGISTRATION_PASSWORD}"@amax.com"
 REGISTRATION_AGREEMENT="true"
 REGISTRATION_LOCALE="en"
 
@@ -29,4 +30,22 @@ USER_ACCESS_TOKEN=$(echo "${ACCOUNT_REGISTER_RESPONSE}" | jq -r .access_token)
 echo "Obtained user access token: ${USER_ACCESS_TOKEN}"
 
 # # Step 4: verify the returned access token
-curl -s -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" "${SERVER_URL}/api/v1/accounts/verify_credentials" | jq
+VERIFY_RESPONSE=$(curl -s -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" "${SERVER_URL}/api/v1/accounts/verify_credentials")
+echo "verify_credentials: ${VERIFY_RESPONSE}"
+
+## Step 5: change email
+#CHANGE_EMAIL=$(curl --fail -s -X POST -H "Authorization: Bearer ${USER_ACCESS_TOKEN}" -F new_email="-"  "${SERVER_URL}/api/v1/user/email_change")
+#echo "email: ${CHANGE_EMAIL}"
+
+# Step 6: Sign in
+#USER_TOKEN=$(curl --fail -s -X POST  -F "username=${REGISTRATION_USERNAME}"  -F "pub_key=${REGISTRATION_PASSWORD}"  "${SERVER_URL}/auth/sign_in/unconfirmed_email")
+#echo "signed in token: ${USER_TOKEN}"
+
+# Step 7 amax create
+#AMAX_CREATE=$(curl --fail -s -H "Authorization: Bearer NJRKMTG1MTCTMJK5NC0ZOTE4LTLIZTKTNZU0MDRKNDMWYJLM" -F "username=jackwang54" -F "pub_key=biancheng347C12345679Abcdefg54" -F "client_id=01HTYTW1H0TG8GMGFW93MXKR1Y" -F "redirect_uri=http://localhost:8080" -F "scopes=read"  -F "response_type=json" "${SERVER_URL}/api/v1/accounts/submit_amax_info")
+#echo "Obtained user access token: ${AMAX_CREATE}"
+
+# Step 8 login for username and pubkey
+#USER_TOKEN=$(curl --fail -s -X POST  -F "username=jackwang54"  -F "pub_key=biancheng347C12345679Abcdefg54"  "${SERVER_URL}/oauth/token/unconfirmed_email")
+#echo "signed in token: ${USER_TOKEN}"
+

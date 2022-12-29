@@ -31,6 +31,7 @@ const (
 
 // DB provides methods for interacting with an underlying database or other storage mechanism.
 type DB interface {
+	Amax
 	Account
 	Admin
 	Basic

@@ -20,6 +20,7 @@ package processing
 
 import (
 	"context"
+	"github.com/superseriousbusiness/gotosocial/internal/processing/amax"
 	"net/http"
 	"net/url"
 	"time"
@@ -71,7 +72,7 @@ type Processor interface {
 		formed reply. For more intensive (and time-consuming) calls, where you don't require an immediate
 		response, pass work to the processor using a channel instead.
 	*/
-
+	AccountCreateUserToken(ctx context.Context, authed *oauth.Auth, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode)
 	// AccountCreate processes the given form for creating a new account, returning an oauth token for that account if successful.
 	AccountCreate(ctx context.Context, authed *oauth.Auth, form *apimodel.AccountCreateRequest) (*apimodel.Token, gtserror.WithCode)
 	// AccountDeleteLocal processes the delete of a LOCAL account using the given form.
@@ -107,6 +108,10 @@ type Processor interface {
 	AccountBlockCreate(ctx context.Context, authed *oauth.Auth, targetAccountID string) (*apimodel.Relationship, gtserror.WithCode)
 	// AccountBlockRemove handles the removal of a block from authed account to target account, either remote or local.
 	AccountBlockRemove(ctx context.Context, authed *oauth.Auth, targetAccountID string) (*apimodel.Relationship, gtserror.WithCode)
+
+	AmaxSubmitInfo(ctx context.Context, form *apimodel.AmaxSubmitInfoRequest) (*gtsmodel.Amax, gtserror.WithCode)
+	AmaxGetAmaxByPubKey(ctx context.Context, pubKey string) (*gtsmodel.Amax, gtserror.WithCode)
+	AmaxSignatureLogin(ctx context.Context, form *apimodel.AmaxSignatureLoginRequest) (*gtsmodel.User, gtserror.WithCode)
 
 	// AdminAccountAction handles the creation/execution of an action on an account.
 	AdminAccountAction(ctx context.Context, authed *oauth.Auth, form *apimodel.AdminAccountActionRequest) gtserror.WithCode
@@ -229,6 +234,8 @@ type Processor interface {
 	// UserConfirmEmail confirms an email address using the given token.
 	// The user belonging to the confirmed email is also returned.
 	UserConfirmEmail(ctx context.Context, token string) (*gtsmodel.User, gtserror.WithCode)
+	// UserChangeEmail changes the email for the given user, with the given form.
+	UserChangeEmail(ctx context.Context, authed *oauth.Auth, form *apimodel.EmailChangeRequest) gtserror.WithCode
 
 	/*
 		FEDERATION API-FACING PROCESSING FUNCTIONS
@@ -300,6 +307,7 @@ type processor struct {
 	streamingProcessor  streaming.Processor
 	mediaProcessor      mediaProcessor.Processor
 	userProcessor       user.Processor
+	amaxProcessor       amax.Processor
 	federationProcessor federationProcessor.Processor
 }
 
@@ -323,6 +331,7 @@ func NewProcessor(
 	adminProcessor := admin.New(db, tc, mediaManager, federator.TransportController(), storage, clientWorker)
 	mediaProcessor := mediaProcessor.New(db, tc, mediaManager, federator.TransportController(), storage)
 	userProcessor := user.New(db, emailSender)
+	amaxProcessor := amax.New(db)
 	federationProcessor := federationProcessor.New(db, tc, federator)
 	filter := visibility.NewFilter(db)
 
@@ -345,6 +354,7 @@ func NewProcessor(
 		streamingProcessor:  streamingProcessor,
 		mediaProcessor:      mediaProcessor,
 		userProcessor:       userProcessor,
+		amaxProcessor:       amaxProcessor,
 		federationProcessor: federationProcessor,
 	}
 }

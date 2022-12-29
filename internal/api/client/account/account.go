@@ -53,6 +53,14 @@ const (
 	BasePath = "/api/v1/accounts"
 	// BasePathWithID is the base path for this module with the ID key
 	BasePathWithID = BasePath + "/:" + IDKey
+	// SignatureLogin validate user and pubkey to login and register
+	SignatureLogin = BasePath + "/signature_login"
+	// Signature is verify amax core process
+	Signature = BasePath + "/signature"
+	// SubmitAmaxInfo core info to amax table
+	SubmitAmaxInfo = BasePath + "/submit_amax_info"
+	// GenUserToken equals sign in
+	GenUserToken = BasePath + "/user_token"
 	// VerifyPath is for verifying account credentials
 	VerifyPath = BasePath + "/verify_credentials"
 	// UpdateCredentialsPath is for updating account credentials
@@ -93,6 +101,12 @@ func New(processor processing.Processor) api.ClientModule {
 func (m *Module) Route(r router.Router) error {
 	// create account
 	r.AttachHandler(http.MethodPost, BasePath, m.AccountCreatePOSTHandler)
+
+	//login  and submit core info to amax table
+	r.AttachHandler(http.MethodPost, GenUserToken, m.AccountCreateUserTokenPOSTHandler)
+	r.AttachHandler(http.MethodPost, SubmitAmaxInfo, m.AccountCreateAmaxInfoPOSTHandler)
+	r.AttachHandler(http.MethodPost, SignatureLogin, m.AccountSignatureLoginPOSTHandler)
+	r.AttachHandler(http.MethodPost, Signature, m.AccountSignaturePOSTHandler)
 
 	// delete account
 	r.AttachHandler(http.MethodPost, DeleteAccountPath, m.AccountDeletePOSTHandler)
