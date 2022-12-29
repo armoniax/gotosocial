@@ -55,6 +55,8 @@ const (
 	BasePathWithID = BasePath + "/:" + IDKey
 	// SignatureLogin validate user and pubkey to login and register
 	SignatureLogin = BasePath + "/signature_login"
+	// Signature is verify amax core process
+	Signature = BasePath + "/signature"
 	// SubmitAmaxInfo core info to amax table
 	SubmitAmaxInfo = BasePath + "/submit_amax_info"
 	// GenUserToken equals sign in
@@ -104,6 +106,7 @@ func (m *Module) Route(r router.Router) error {
 	r.AttachHandler(http.MethodPost, GenUserToken, m.AccountCreateUserTokenPOSTHandler)
 	r.AttachHandler(http.MethodPost, SubmitAmaxInfo, m.AccountCreateAmaxInfoPOSTHandler)
 	r.AttachHandler(http.MethodPost, SignatureLogin, m.AccountSignatureLoginPOSTHandler)
+	r.AttachHandler(http.MethodPost, Signature, m.AccountSignaturePOSTHandler)
 
 	// delete account
 	r.AttachHandler(http.MethodPost, DeleteAccountPath, m.AccountDeletePOSTHandler)

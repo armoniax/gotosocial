@@ -164,9 +164,7 @@ func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatu
 
 	amax, err := m.processor.AmaxGetAmaxByPubKey(ctx, form.PubKey)
 
-	port := config.GetPort()
-	addr := fmt.Sprintf("%s:%d", BindAddress, port)
-
+	addr := getAddr()
 	switch {
 	case err != nil && err.Error() == NotFound:
 		return m.register(addr, form)
@@ -175,6 +173,11 @@ func (m *Module) amaxSignatureLogin(ctx context.Context, form *model.AmaxSignatu
 	default:
 		return nil, err
 	}
+}
+
+func getAddr() string {
+	port := config.GetPort()
+	return fmt.Sprintf("%s:%d", BindAddress, port)
 }
 
 func (m *Module) register(addr string, form *model.AmaxSignatureLoginRequest) (token *token, errs gtserror.WithCode) {

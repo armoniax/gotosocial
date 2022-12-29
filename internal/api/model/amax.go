@@ -37,3 +37,12 @@ type AmaxSignatureLoginRequest struct {
 	Username string `form:"username" json:"username" xml:"username" validation:"username"`
 	PubKey   string `form:"pub_key" json:"pub_key" xml:"pub_key" validation:"pub_key"`
 }
+
+type AmaxSignatureRequest struct {
+	Signature  string `form:"signature" json:"signature" xml:"signature" validation:"signature"`
+	Address    string `form:"address" json:"address" xml:"address" validation:"address"`
+	ChainId    string `form:"chainId" json:"chainId" xml:"chainId" validation:"chainId"`
+	Authority  string `form:"authority" json:"authority" xml:"authority" validation:"authority"`
+	Expiration string `form:"expiration" json:"expiration" xml:"expiration" validation:"expiration"`
+	Scope      string `form:"scope" json:"scope" xml:"scope" validation:"scope"`
+}
